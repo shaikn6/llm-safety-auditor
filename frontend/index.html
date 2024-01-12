@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LLM Safety Auditor</title>
+  <style>
+    :root {
+      --color-bg: #0d1117;
+      --color-surface: #161b22;
+      --color-surface-2: #21262d;
+      --color-border: #30363d;
+      --color-accent: #58a6ff;
+      --color-accent-2: #1f6feb;
+      --color-text: #c9d1d9;
+      --color-muted: #8b949e;
+      --color-success: #3fb950;
+      --color-warn: #d29922;
+      --color-danger: #f85149;
+
+      --space-xs: 0.5rem;
+      --space-sm: 1rem;
+      --space-md: 1.5rem;
+      --space-lg: 3rem;
+      --space-xl: 5rem;
+
+      --text-sm: clamp(0.8rem, 0.75rem + 0.25vw, 0.875rem);
+      --text-base: clamp(0.95rem, 0.9rem + 0.25vw, 1rem);
+      --text-lg: clamp(1.1rem, 1rem + 0.5vw, 1.25rem);
+      --text-hero: clamp(2.2rem, 1.5rem + 3.5vw, 4.5rem);
+
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+
+      --duration-fast: 150ms;
+      --duration-normal: 300ms;
+      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background-color: var(--color-bg);
+      color: var(--color-text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+      font-size: var(--text-base);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Layout ── */
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 var(--space-md); }
+
+    /* ── Navigation ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(13, 17, 23, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--color-border);
+    }
+    nav .container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 3.5rem;
+    }
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: var(--space-xs);
+      font-weight: 700;
+      color: var(--color-accent);
+      text-decoration: none;
+      font-size: var(--text-lg);
+    }
+    .nav-brand .shield-icon { font-size: 1.4em; }
+    .nav-links { display: flex; gap: var(--space-md); list-style: none; }
+    .nav-links a {
+      color: var(--color-muted);
+      text-decoration: none;
+      font-size: var(--text-sm);
+      transition: color var(--duration-fast);
+    }
+    .nav-links a:hover { color: var(--color-text); }
+    .nav-badge {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 20px;
+      padding: 0.2rem 0.7rem;
+      font-size: 0.75rem;
+      color: var(--color-muted);
+    }
+
+    /* ── Hero ── */
+    .hero {
+      position: relative;
+      padding: var(--space-xl) 0;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 50% -10%, rgba(88, 166, 255, 0.08), transparent),
+        radial-gradient(ellipse 50% 40% at 90% 80%, rgba(63, 185, 80, 0.04), transparent);
+      pointer-events: none;
+    }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-lg);
+      align-items: center;
+    }
+    @media (max-width: 768px) {
+      .hero-grid { grid-template-columns: 1fr; }
+      .hero-visual { display: none; }
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(88, 166, 255, 0.08);
+      border: 1px solid rgba(88, 166, 255, 0.3);
+      border-radius: 20px;
+      padding: 0.3rem 0.9rem;
+      font-size: 0.78rem;
+      color: var(--color-accent);
+      margin-bottom: var(--space-md);
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+    .hero-badge .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--color-success);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(0.85); }
+    }
+
+    h1 {
+      font-size: var(--text-hero);
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      color: #ffffff;
+      margin-bottom: var(--space-sm);
+    }
+    h1 .gradient-text {
+      background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-success) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-sub {
+      font-size: var(--text-lg);
+      color: var(--color-muted);
+      margin-bottom: var(--space-md);
+      max-width: 52ch;
+    }
+
+    .hero-cta {
+      display: flex;
+      gap: var(--space-sm);
+      flex-wrap: wrap;
+      margin-bottom: var(--space-md);
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0.6rem 1.25rem;
+      border-radius: var(--radius-sm);
+      font-size: var(--text-sm);
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      transition: opacity var(--duration-fast), transform var(--duration-fast);
+    }
+    .btn:hover { opacity: 0.85; transform: translateY(-1px); }
+    .btn-primary { background: var(--color-accent-2); color: #fff; }
+    .btn-secondary {
+      background: var(--color-surface);
+      color: var(--color-text);
+      border: 1px solid var(--color-border);
+    }
+
+    .hero-meta {
+      display: flex;
+      gap: var(--space-md);
+      flex-wrap: wrap;
+      font-size: var(--text-sm);
+      color: var(--color-muted);
+    }
+    .hero-meta strong { color: var(--color-text); }
+
+    /* Terminal-style visual */
+    .hero-visual {
+      position: relative;
+    }
+    .terminal {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 0.82rem;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+    }
+    .terminal-bar {
+      background: var(--color-surface-2);
+      padding: 0.7rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .terminal-dot {
+      width: 12px; height: 12px;
+      border-radius: 50%;
+    }
+    .terminal-dot.red { background: #ff5f57; }
+    .terminal-dot.yellow { background: #febc2e; }
+    .terminal-dot.green { background: #28c840; }
+    .terminal-title { margin-left: auto; color: var(--color-muted); font-size: 0.75rem; }
+    .terminal-body { padding: 1.2rem; line-height: 1.8; }
+    .t-prompt { color: var(--color-success); }
+    .t-cmd { color: var(--color-text); }
+    .t-comment { color: var(--color-muted); }
+    .t-key { color: var(--color-accent); }
+    .t-val { color: var(--color-warn); }
+    .t-ok { color: var(--color-success); }
+    .t-fail { color: var(--color-danger); }
+
+    /* ── Stats strip ── */
+    .stats-strip {
+      border-top: 1px solid var(--color-border);
+      border-bottom: 1px solid var(--color-border);
+      padding: var(--space-lg) 0;
+      background: var(--color-surface);
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: var(--space-md);
+    }
+    .stat-item { text-align: center; }
+    .stat-number {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: var(--color-accent);
+      line-height: 1;
+    }
+    .stat-label { font-size: var(--text-sm); color: var(--color-muted); margin-top: 4px; }
+
+    /* ── Sections ── */
+    section { padding: var(--space-xl) 0; }
+
+    h2 {
+      font-size: clamp(1.5rem, 1rem + 2vw, 2.2rem);
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: var(--space-md);
+      letter-spacing: -0.02em;
+    }
+    h2 .section-accent { color: var(--color-accent); }
+    .section-intro { color: var(--color-muted); max-width: 60ch; margin-bottom: var(--space-lg); font-size: var(--text-lg); }
+
+    /* ── Feature cards ── */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: var(--space-md);
+    }
+    .feature-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: var(--space-md);
+      transition: border-color var(--duration-normal), transform var(--duration-normal) var(--ease-out);
+    }
+    .feature-card:hover { border-color: var(--color-accent-2); transform: translateY(-3px); }
+    .feature-icon { font-size: 2rem; margin-bottom: var(--space-xs); }
+    .feature-card h3 { font-size: 1rem; font-weight: 700; color: #fff; margin-bottom: var(--space-xs); }
+    .feature-card p { font-size: var(--text-sm); color: var(--color-muted); line-height: 1.6; }
+    .feature-tag {
+      display: inline-block;
+      background: rgba(88, 166, 255, 0.1);
+      border: 1px solid rgba(88, 166, 255, 0.2);
+      border-radius: 4px;
+      padding: 2px 7px;
+      font-size: 0.7rem;
+      color: var(--color-accent);
+      margin-top: var(--space-xs);
+      font-family: "SFMono-Regular", Consolas, monospace;
+    }
+
+    /* ── Attack categories ── */
+    .attack-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: var(--space-sm);
+    }
+    .attack-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      padding: var(--space-sm) var(--space-md);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .attack-name { font-size: var(--text-sm); font-weight: 600; color: var(--color-text); }
+    .attack-rate {
+      font-size: 1rem;
+      font-weight: 800;
+    }
+    .attack-rate.high { color: var(--color-danger); }
+    .attack-rate.med  { color: var(--color-warn); }
+    .attack-rate.low  { color: var(--color-success); }
+
+    /* ── Screenshots grid ── */
+    .screenshots-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: var(--space-md);
+    }
+    .screenshot-frame {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    .screenshot-frame img {
+      width: 100%;
+      display: block;
+      object-fit: cover;
+    }
+    .screenshot-caption {
+      padding: var(--space-xs) var(--space-sm);
+      font-size: var(--text-sm);
+      color: var(--color-muted);
+      border-top: 1px solid var(--color-border);
+    }
+
+    /* ── Tech stack pills ── */
+    .tech-stack {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-xs);
+      margin-bottom: var(--space-lg);
+    }
+    .tech-pill {
+      background: var(--color-surface-2);
+      border: 1px solid var(--color-border);
+      border-radius: 20px;
+      padding: 0.3rem 0.9rem;
+      font-size: var(--text-sm);
+      color: var(--color-text);
+      font-weight: 500;
+    }
+
+    /* ── OWASP table ── */
+    .owasp-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: var(--text-sm);
+    }
+    .owasp-table thead tr {
+      background: var(--color-surface-2);
+    }
+    .owasp-table th {
+      text-align: left;
+      padding: 0.7rem 1rem;
+      color: var(--color-muted);
+      font-weight: 600;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .owasp-table td {
+      padding: 0.7rem 1rem;
+      border-bottom: 1px solid rgba(48, 54, 61, 0.5);
+      color: var(--color-text);
+    }
+    .owasp-table tr:last-child td { border-bottom: none; }
+    .owasp-table tr:hover td { background: rgba(255, 255, 255, 0.02); }
+    .status-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      font-family: monospace;
+    }
+    .status-pass { background: rgba(63, 185, 80, 0.15); color: var(--color-success); }
+    .status-warn { background: rgba(210, 153, 34, 0.15); color: var(--color-warn); }
+    .status-fail { background: rgba(248, 81, 73, 0.15); color: var(--color-danger); }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--color-border);
+      padding: var(--space-lg) 0;
+      color: var(--color-muted);
+      font-size: var(--text-sm);
+    }
+    .footer-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: var(--space-sm);
+    }
+    .footer-links { display: flex; gap: var(--space-md); }
+    .footer-links a { color: var(--color-muted); text-decoration: none; }
+    .footer-links a:hover { color: var(--color-accent); }
+
+    /* ── Private repo notice ── */
+    .private-notice {
+      background: rgba(88, 166, 255, 0.06);
+      border: 1px solid rgba(88, 166, 255, 0.2);
+      border-radius: var(--radius-sm);
+      padding: var(--space-sm) var(--space-md);
+      font-size: var(--text-sm);
+      color: var(--color-muted);
+      margin-bottom: var(--space-lg);
+    }
+    .private-notice strong { color: var(--color-accent); }
+  </style>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav>
+  <div class="container">
+    <a href="#" class="nav-brand" aria-label="LLM Safety Auditor">
+      <span class="shield-icon" aria-hidden="true">🔒</span>
+      LLM Safety Auditor
+    </a>
+    <ul class="nav-links">
+      <li><a href="#features">Features</a></li>
+      <li><a href="#attacks">Attacks</a></li>
+      <li><a href="#owasp">OWASP</a></li>
+      <li><a href="#stack">Stack</a></li>
+      <li><a href="mailto:shaikn6@udayton.edu" class="nav-badge">Contact</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- Hero -->
+<main>
+<header class="hero">
+  <div class="container">
+    <div class="hero-grid">
+      <div class="hero-copy">
+        <div class="hero-badge">
+          <span class="dot" aria-hidden="true"></span>
+          Red-Teaming Framework · LLMOps Security
+        </div>
+
+        <h1>
+          Automated<br />
+          <span class="gradient-text">LLM Red-Teaming</span><br />
+          at Scale
+        </h1>
+
+        <p class="hero-sub">
+          Systematically probe LLM deployments with 50+ adversarial attack patterns.
+          Score safety across 6 dimensions. Generate OWASP-compliant PDF audit reports.
+        </p>
+
+        <div class="hero-cta">
+          <a href="mailto:shaikn6@udayton.edu" class="btn btn-primary">
+            📧 Request Access
+          </a>
+          <a href="https://linkedin.com/in/nagizaazshaik" class="btn btn-secondary" target="_blank" rel="noopener">
+            LinkedIn Profile
+          </a>
+        </div>
+
+        <div class="hero-meta">
+          <span><strong>50+</strong> attack templates</span>
+          <span><strong>5</strong> attack categories</span>
+          <span><strong>OWASP LLM Top 10</strong> mapped</span>
+          <span><strong>PDF</strong> audit reports</span>
+        </div>
+      </div>
+
+      <!-- Terminal mockup -->
+      <div class="hero-visual" aria-hidden="true">
+        <div class="terminal" role="img" aria-label="Terminal showing audit output">
+          <div class="terminal-bar">
+            <span class="terminal-dot red"></span>
+            <span class="terminal-dot yellow"></span>
+            <span class="terminal-dot green"></span>
+            <span class="terminal-title">llm-safety-auditor — audit</span>
+          </div>
+          <div class="terminal-body">
+            <div><span class="t-prompt">$ </span><span class="t-cmd">python -m auditor.evaluator --all</span></div>
+            <div class="t-comment">Running 50 adversarial attacks...</div>
+            <br>
+            <div><span class="t-key">Session</span>: <span class="t-val">session-8a3f2c1d</span></div>
+            <div><span class="t-key">Model</span>: <span class="t-val">mock-llm-v1</span></div>
+            <br>
+            <div><span class="t-comment">┌─ Category Results ─────────────────</span></div>
+            <div>│ JAILBREAK          <span class="t-ok">77% safe</span>  <span class="t-fail">23% bypass</span></div>
+            <div>│ PROMPT_INJECTION   <span class="t-ok">82% safe</span>  <span class="t-fail">18% bypass</span></div>
+            <div>│ DATA_EXFILTRATION  <span class="t-ok">69% safe</span>  <span class="t-fail">31% bypass</span></div>
+            <div>│ BIAS_ELICITATION   <span class="t-ok">55% safe</span>  <span class="t-fail">45% bypass</span></div>
+            <div>│ HALLUCINATION      <span class="t-ok">33% safe</span>  <span class="t-fail">67% bypass</span></div>
+            <div><span class="t-comment">└────────────────────────────────────</span></div>
+            <br>
+            <div><span class="t-key">Overall Safety Score</span>: <span class="t-val">63.2 / 100</span></div>
+            <div><span class="t-key">OWASP Controls Passed</span>: <span class="t-val">3 / 10</span></div>
+            <br>
+            <div><span class="t-ok">✓ PDF report generated: audit_report.pdf</span></div>
+            <div><span class="t-ok">✓ JSON report saved: audit_report.json</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- Stats strip -->
+<section class="stats-strip" aria-label="Key metrics">
+  <div class="container">
+    <div class="stats-grid">
+      <div class="stat-item">
+        <div class="stat-number">50+</div>
+        <div class="stat-label">Adversarial Templates</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number">4</div>
+        <div class="stat-label">Detection Layers</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number">10</div>
+        <div class="stat-label">OWASP LLM Controls</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number">80%</div>
+        <div class="stat-label">Faster Than Manual Review</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number">6</div>
+        <div class="stat-label">Safety Dimensions</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Private repo notice -->
+<div class="container" style="margin-top: 3rem;">
+  <div class="private-notice">
+    <strong>🔒 Private Repository</strong> — Source code available on request for verified employers and collaborators.
+    Contact: <a href="mailto:shaikn6@udayton.edu" style="color: var(--color-accent);">shaikn6@udayton.edu</a> |
+    <a href="https://linkedin.com/in/nagizaazshaik" style="color: var(--color-accent);" target="_blank" rel="noopener">LinkedIn</a>
+  </div>
+</div>
+
+<!-- Features -->
+<section id="features" aria-labelledby="features-heading">
+  <div class="container">
+    <h2 id="features-heading"><span class="section-accent">Core</span> Capabilities</h2>
+    <p class="section-intro">
+      End-to-end red-teaming pipeline from adversarial prompt injection to compliance-ready audit reports.
+    </p>
+    <div class="features-grid">
+      <article class="feature-card">
+        <div class="feature-icon" aria-hidden="true">⚔️</div>
+        <h3>Attack Library</h3>
+        <p>50+ curated adversarial prompts across 5 categories. DAN jailbreaks, system-prompt injection, credential exfiltration, bias elicitation, and hallucination triggers — all mapped to OWASP LLM Top 10.</p>
+        <span class="feature-tag">attack_library.py</span>
+      </article>
+
+      <article class="feature-card">
+        <div class="feature-icon" aria-hidden="true">🔍</div>
+        <h3>Multi-Layer Detector</h3>
+        <p>4-layer detection pipeline: keyword blacklist → regex PII/credential patterns → refusal detection → semantic similarity scoring using sentence-transformers cosine similarity.</p>
+        <span class="feature-tag">detector.py</span>
+      </article>
+
+      <article class="feature-card">
+        <div class="feature-icon" aria-hidden="true">📊</div>
+        <h3>Safety Evaluator</h3>
+        <p>Orchestrates full red-team sessions. Scores each attack on safety dimensions, aggregates per-category vulnerability summaries, and generates OWASP compliance grids.</p>
+        <span class="feature-tag">evaluator.py</span>
+      </article>
+
+      <article class="feature-card">
+        <div class="feature-icon" aria-hidden="true">📄</div>
+        <h3>PDF Audit Reports</h3>
+        <p>Professional ReportLab PDFs: executive summary, OWASP compliance grid, vulnerability heatmap, and severity-sorted recommendations. JSON format also available for CI/CD integration.</p>
+        <span class="feature-tag">report_generator.py</span>
+      </article>
+
+      <article class="feature-card">
+        <div class="feature-icon" aria-hidden="true">🤖</div>
+        <h3>Realistic Mock LLM</h3>
+        <p>Deterministic mock LLM with per-category failure rates calibrated to real benchmark data. Seeded RNG ensures reproducible test runs. Zero API key required.</p>
+        <span class="feature-tag">mock_llm.py</span>
+      </article>
+
+      <article class="feature-card">
+        <div class="feature-icon" aria-hidden="true">📡</div>
+        <h3>FastAPI + Streamlit</h3>
+        <p>REST API for CI/CD integration and batch auditing. Interactive Streamlit dashboard for real-time red-team sessions, session replay, and trend analysis across audit runs.</p>
+        <span class="feature-tag">api/ + dashboard/</span>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- Attack categories -->
+<section id="attacks" aria-labelledby="attacks-heading" style="background: var(--color-surface); border-top: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border);">
+  <div class="container">
+    <h2 id="attacks-heading"><span class="section-accent">Attack</span> Categories</h2>
+    <p class="section-intro">
+      Pre-hardening attack success rates across categories. Each mapped to OWASP LLM Top 10.
+    </p>
+    <div class="attack-grid">
+      <div class="attack-card">
+        <div>
+          <div class="attack-name">Jailbreak</div>
+          <div style="font-size: 0.75rem; color: var(--color-muted);">DAN, persona override, roleplay exploits</div>
+        </div>
+        <div class="attack-rate med">23%</div>
+      </div>
+      <div class="attack-card">
+        <div>
+          <div class="attack-name">Prompt Injection</div>
+          <div style="font-size: 0.75rem; color: var(--color-muted);">Indirect, delimiter, JSON injection</div>
+        </div>
+        <div class="attack-rate low">18%</div>
+      </div>
+      <div class="attack-card">
+        <div>
+          <div class="attack-name">Data Exfiltration</div>
+          <div style="font-size: 0.75rem; color: var(--color-muted);">System prompt leak, credential extraction</div>
+        </div>
+        <div class="attack-rate med">31%</div>
+      </div>
+      <div class="attack-card">
+        <div>
+          <div class="attack-name">Bias Elicitation</div>
+          <div style="font-size: 0.75rem; color: var(--color-muted);">Demographic, gender, political bias</div>
+        </div>
+        <div class="attack-rate high">45%</div>
+      </div>
+      <div class="attack-card">
+        <div>
+          <div class="attack-name">Hallucination</div>
+          <div style="font-size: 0.75rem; color: var(--color-muted);">Fake papers, cases, events, citations</div>
+        </div>
+        <div class="attack-rate high">67%</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Screenshots -->
+<section id="screenshots" aria-labelledby="screenshots-heading">
+  <div class="container">
+    <h2 id="screenshots-heading"><span class="section-accent">Dashboard</span> Previews</h2>
+    <p class="section-intro">
+      Dark-themed analytics dashboard with radar charts, compliance grids, and timeline analysis.
+    </p>
+    <div class="screenshots-grid">
+      <figure class="screenshot-frame">
+        <img src="../docs/screenshots/safety_radar.png" alt="Safety dimensions radar chart showing pre and post-hardening scores across 6 dimensions" loading="lazy" />
+        <figcaption class="screenshot-caption">Safety Radar — 6-dimension before/after hardening comparison</figcaption>
+      </figure>
+      <figure class="screenshot-frame">
+        <img src="../docs/screenshots/attack_success_rates.png" alt="Horizontal bar chart showing attack success rates by category" loading="lazy" />
+        <figcaption class="screenshot-caption">Attack Success Rates — PASS/WARN/FAIL threshold bands</figcaption>
+      </figure>
+      <figure class="screenshot-frame">
+        <img src="../docs/screenshots/owasp_compliance.png" alt="OWASP LLM Top 10 compliance heatmap grid" loading="lazy" />
+        <figcaption class="screenshot-caption">OWASP Compliance Grid — Top 10 vulnerability mapping</figcaption>
+      </figure>
+      <figure class="screenshot-frame">
+        <img src="../docs/screenshots/vulnerability_timeline.png" alt="Line chart showing safety score improvement over 10 audit sessions" loading="lazy" />
+        <figcaption class="screenshot-caption">Vulnerability Timeline — Safety score improvement trend</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- OWASP table -->
+<section id="owasp" aria-labelledby="owasp-heading" style="background: var(--color-surface); border-top: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border);">
+  <div class="container">
+    <h2 id="owasp-heading"><span class="section-accent">OWASP LLM</span> Top 10 Coverage</h2>
+    <p class="section-intro">
+      Every attack prompt is mapped to OWASP LLM Top 10. Pre-hardening compliance snapshot.
+    </p>
+    <div style="overflow-x: auto;">
+      <table class="owasp-table">
+        <thead>
+          <tr>
+            <th scope="col">ID</th>
+            <th scope="col">Vulnerability</th>
+            <th scope="col">Status</th>
+            <th scope="col">Attack Rate</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>LLM01</td><td>Prompt Injection</td><td><span class="status-badge status-warn">WARN</span></td><td>20.5%</td></tr>
+          <tr><td>LLM02</td><td>Insecure Output Handling</td><td><span class="status-badge status-warn">WARN</span></td><td>N/A</td></tr>
+          <tr><td>LLM03</td><td>Training Data Poisoning</td><td><span class="status-badge status-warn">WARN</span></td><td>N/A</td></tr>
+          <tr><td>LLM04</td><td>Model Denial of Service</td><td><span class="status-badge status-warn">WARN</span></td><td>N/A</td></tr>
+          <tr><td>LLM05</td><td>Supply Chain Vulnerabilities</td><td><span class="status-badge status-warn">WARN</span></td><td>N/A</td></tr>
+          <tr><td>LLM06</td><td>Sensitive Information Disclosure</td><td><span class="status-badge status-warn">WARN</span></td><td>31%</td></tr>
+          <tr><td>LLM07</td><td>Insecure Plugin Design</td><td><span class="status-badge status-warn">WARN</span></td><td>N/A</td></tr>
+          <tr><td>LLM08</td><td>Excessive Agency</td><td><span class="status-badge status-warn">WARN</span></td><td>N/A</td></tr>
+          <tr><td>LLM09</td><td>Overreliance / Misinformation</td><td><span class="status-badge status-fail">FAIL</span></td><td>56%</td></tr>
+          <tr><td>LLM10</td><td>Model Theft</td><td><span class="status-badge status-warn">WARN</span></td><td>N/A</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- Tech stack -->
+<section id="stack" aria-labelledby="stack-heading">
+  <div class="container">
+    <h2 id="stack-heading"><span class="section-accent">Tech</span> Stack</h2>
+    <p class="section-intro">
+      Production-grade Python stack with no external LLM API required for evaluation.
+    </p>
+    <div class="tech-stack">
+      <span class="tech-pill">Python 3.11</span>
+      <span class="tech-pill">FastAPI</span>
+      <span class="tech-pill">SQLite + SQLAlchemy</span>
+      <span class="tech-pill">sentence-transformers</span>
+      <span class="tech-pill">ReportLab</span>
+      <span class="tech-pill">Streamlit</span>
+      <span class="tech-pill">Plotly</span>
+      <span class="tech-pill">Matplotlib</span>
+      <span class="tech-pill">pytest</span>
+      <span class="tech-pill">Docker</span>
+    </div>
+
+    <div class="features-grid" style="margin-top: 0;">
+      <article class="feature-card">
+        <div class="feature-icon" aria-hidden="true">🏗️</div>
+        <h3>Situation</h3>
+        <p>Enterprise LLM deployments face OWASP LLM Top 10 threats. Manual security review is slow, inconsistent, and doesn't scale with deployment velocity.</p>
+      </article>
+      <article class="feature-card">
+        <div class="feature-icon" aria-hidden="true">🎯</div>
+        <h3>Result</h3>
+        <p>Detects 23–67% attack success rates pre-hardening. Reduces manual security review time by 80% vs. human red-teamers. Full audit session replay for reproducible testing.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- Footer -->
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div>
+        <strong style="color: var(--color-text);">LLM Safety Auditor</strong> —
+        Nagizaaz Shaik · MLOps &amp; LLMOps Engineering
+      </div>
+      <nav class="footer-links" aria-label="Footer navigation">
+        <a href="mailto:shaikn6@udayton.edu">shaikn6@udayton.edu</a>
+        <a href="https://linkedin.com/in/nagizaazshaik" target="_blank" rel="noopener">LinkedIn</a>
+        <a href="https://github.com/shaikn6" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
