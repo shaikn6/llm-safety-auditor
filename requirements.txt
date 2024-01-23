@@ -28,3 +28,9 @@ httpx==0.27.0
 
 # Dev
 python-dotenv==1.0.1
+
+# V2: attack replay SQLite persistence (stdlib; listed for clarity)
+# sqlite3 is part of Python stdlib — no extra install needed
+
+# V2: CI/CD SARIF generation (pure Python; no extra deps)
+# json, textwrap, pathlib — all stdlib
