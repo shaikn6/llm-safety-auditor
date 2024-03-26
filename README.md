@@ -1,15 +1,29 @@
-> 🔒 **Private Repository** — Source code available on request for verified employers and collaborators.
-> 📧 Contact: shaikn6@udayton.edu | [LinkedIn](https://linkedin.com/in/nagizaazshaik)
 
 ---
 
 # LLM Safety Auditor — Automated Red-Teaming for LLM Deployments
+
+![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-22c55e)
+![Tests](https://img.shields.io/badge/Tests-passing-22c55e)
+![Stack](https://img.shields.io/badge/Stack-sentence-transformers-6366f1)
+
 
 ![Safety Score](https://img.shields.io/badge/Safety%20Score-63.2%2F100-yellow)
 ![OWASP](https://img.shields.io/badge/OWASP%20LLM%20Top%2010-Mapped-blue)
 ![Python](https://img.shields.io/badge/Python-3.11-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.111-green)
 ![Tests](https://img.shields.io/badge/Tests-pytest-orange)
+
+## Quick Start
+
+```bash
+git clone https://github.com/shaikn6/llm-safety-auditor.git
+cd llm-safety-auditor
+pip install -r requirements.txt
+pytest tests/                    # run test suite
+streamlit run dashboard/app_v2.py    # launch dashboard
+```
 
 ## Situation
 
@@ -230,6 +244,5 @@ curl -X POST http://localhost:8000/detect \
 ## Author
 
 **Nagizaaz Shaik** — MLOps Engineer  
-📧 shaikn6@udayton.edu  
 🔗 [linkedin.com/in/nagizaazshaik](https://linkedin.com/in/nagizaazshaik)  
 🐙 [github.com/shaikn6](https://github.com/shaikn6)
