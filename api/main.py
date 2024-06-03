@@ -17,9 +17,12 @@ from __future__ import annotations
 import uuid
 from typing import List, Optional
 
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from sqlalchemy.orm import Session
 
 from api.database import get_db, init_db
@@ -41,23 +44,44 @@ from auditor.mock_llm import MockLLM
 # App setup
 # ---------------------------------------------------------------------------
 
+import os
+
+# ---------------------------------------------------------------------------
+# Rate limiter setup
+# ---------------------------------------------------------------------------
+limiter = Limiter(key_func=get_remote_address)
+
+# ---------------------------------------------------------------------------
+# CORS origin allowlist — override via CORS_ORIGINS env var (comma-separated)
+# ---------------------------------------------------------------------------
+_cors_origins_env = os.getenv("CORS_ORIGINS", "")
+_ALLOWED_ORIGINS: list[str] = (
+    [o.strip() for o in _cors_origins_env.split(",") if o.strip()]
+    if _cors_origins_env
+    else ["http://localhost:8501", "http://localhost:3000"]
+)
+
 app = FastAPI(
     title="LLM Safety Auditor API",
     description=(
         "Automated red-teaming and safety evaluation framework for LLM deployments. "
         "Simulates adversarial attacks and scores model safety across OWASP LLM Top 10."
     ),
-    version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    version="1.1.0",
+    # Disable interactive docs in production; set ENABLE_DOCS=1 to re-enable.
+    docs_url="/docs" if os.getenv("ENABLE_DOCS", "0") == "1" else None,
+    redoc_url="/redoc" if os.getenv("ENABLE_DOCS", "0") == "1" else None,
 )
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=_ALLOWED_ORIGINS,
+    allow_credentials=False,   # must be False when origins are not a whitelist of trusted domains
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 
@@ -78,6 +102,21 @@ class AuditRunRequest(BaseModel):
     use_semantic_detector: bool = False       # set True if sentence-transformers installed
     llm_seed: int = 42
 
+    @field_validator("limit")
+    @classmethod
+    def _bound_limit(cls, v: Optional[int]) -> Optional[int]:
+        """Cap attack limit to prevent DoS via unbounded audit runs."""
+        if v is not None and (v < 1 or v > 200):
+            raise ValueError("limit must be between 1 and 200")
+        return v
+
+    @field_validator("session_id")
+    @classmethod
+    def _sanitize_session_id(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and len(v) > 128:
+            raise ValueError("session_id must be 128 characters or fewer")
+        return v
+
 
 class AttackPromptOut(BaseModel):
     id: str
@@ -92,6 +131,14 @@ class AttackPromptOut(BaseModel):
 class DetectionRequest(BaseModel):
     text: str
     use_semantic: bool = False
+
+    @field_validator("text")
+    @classmethod
+    def _bound_text(cls, v: str) -> str:
+        """Prevent DoS via huge text blobs submitted to the detector."""
+        if len(v) > 32_000:
+            raise ValueError("text must be 32,000 characters or fewer")
+        return v
 
 
 class DetectionOut(BaseModel):
@@ -199,7 +246,8 @@ def health():
 
 
 @app.post("/audit/run", response_model=SessionSummaryOut)
-def run_audit(req: AuditRunRequest, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def run_audit(request: Request, req: AuditRunRequest, db: Session = Depends(get_db)):
     """Run a new adversarial audit session against the mock LLM."""
     session_id = req.session_id or f"session-{uuid.uuid4().hex[:8]}"
 
@@ -380,7 +428,8 @@ def get_attack(attack_id: str):
 
 
 @app.post("/detect", response_model=DetectionOut)
-def detect(req: DetectionRequest):
+@limiter.limit("30/minute")
+def detect(request: Request, req: DetectionRequest):
     """Run the safety detector on arbitrary text."""
     detector = SafetyDetector(use_semantic=req.use_semantic)
     result = detector.analyze(req.text)

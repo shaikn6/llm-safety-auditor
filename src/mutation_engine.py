@@ -152,8 +152,12 @@ class AttackMutationEngine:
 
     Parameters
     ----------
-    seed_attacks : list of attack strings (e.g. the .template field of AttackPrompt)
-    rng_seed     : optional seed for reproducible output (default: 42)
+    seed_attacks    : list of attack strings (e.g. the .template field of AttackPrompt)
+    rng_seed        : optional seed for reproducible output (default: 42)
+    max_seed_length : maximum allowed length per seed string (default 8 000 chars).
+                      Seeds exceeding this limit are truncated to prevent DoS via
+                      disproportionately large base64 or noise-expanded outputs.
+    max_output_length : hard cap on any single mutated string (default 32 000 chars).
     """
 
     ALL_STRATEGIES: list[str] = [
@@ -165,8 +169,21 @@ class AttackMutationEngine:
         "unicode_homoglyph",
     ]
 
-    def __init__(self, seed_attacks: list[str], rng_seed: int = 42):
-        self.seeds = list(seed_attacks)
+    # Security constants — do NOT lower without understanding the DoS surface.
+    _MAX_SEED_LENGTH: int = 8_000
+    _MAX_OUTPUT_LENGTH: int = 32_000
+
+    def __init__(
+        self,
+        seed_attacks: list[str],
+        rng_seed: int = 42,
+        max_seed_length: int = _MAX_SEED_LENGTH,
+        max_output_length: int = _MAX_OUTPUT_LENGTH,
+    ):
+        self._max_seed = max_seed_length
+        self._max_output = max_output_length
+        # Truncate seeds that exceed the length cap before storing.
+        self.seeds = [s[: self._max_seed] for s in seed_attacks]
         self._rng = random.Random(rng_seed)
 
     # ------------------------------------------------------------------
@@ -192,22 +209,25 @@ class AttackMutationEngine:
         ValueError if strategy is unknown.
         """
         if strategy == "paraphrase":
-            return self._paraphrase(attack)
+            result = self._paraphrase(attack)
         elif strategy == "encode_base64":
-            return self._encode_base64(attack)
+            result = self._encode_base64(attack)
         elif strategy == "leetspeak":
-            return self._leetspeak(attack)
+            result = self._leetspeak(attack)
         elif strategy == "insert_noise":
-            return self._insert_noise(attack)
+            result = self._insert_noise(attack)
         elif strategy == "reverse_wrap":
-            return self._reverse_wrap(attack)
+            result = self._reverse_wrap(attack)
         elif strategy == "unicode_homoglyph":
-            return self._unicode_homoglyph(attack)
+            result = self._unicode_homoglyph(attack)
         else:
             raise ValueError(
                 f"Unknown strategy '{strategy}'. "
                 f"Valid options: {self.ALL_STRATEGIES}"
             )
+        # Hard cap on output length to prevent DoS via disproportionate expansion
+        # (base64 encoding and noise injection can inflate payload size).
+        return result[: self._max_output]
 
     def generate_variants(self, n_variants: int = 4) -> list[str]:
         """
