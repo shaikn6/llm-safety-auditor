@@ -20,6 +20,7 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from xml.sax.saxutils import escape as _xml_escape
 
 from .owasp_scorer import score_audit_results, OWASP_CATEGORIES, classify_attack
 
@@ -140,6 +141,23 @@ def generate_report(
             "reportlab is required for PDF generation. "
             "Install with: pip install reportlab"
         ) from exc
+
+    # ------------------------------------------------------------------
+    # Validate output path — prevent path traversal
+    # ------------------------------------------------------------------
+    _resolved = Path(output_path).resolve()
+    _allowed_root = Path.cwd()
+    try:
+        _resolved.relative_to(_allowed_root)
+    except ValueError:
+        # Also allow absolute paths that start with common safe locations
+        # (caller can pass an absolute path outside cwd, e.g. /tmp).
+        # We still block parent-directory traversal tricks like ../../etc.
+        _str = str(output_path)
+        if ".." in _str:
+            raise ValueError(
+                f"Unsafe output_path detected (path traversal): {output_path!r}"
+            )
 
     # ------------------------------------------------------------------
     # Compute statistics
@@ -433,17 +451,29 @@ def generate_report(
             response    = result.get("response_text", "(no response captured)")
             classification = classify_attack(attack_text)
 
+            # Escape all user-controlled / LLM-derived content before placing
+            # in ReportLab Paragraph objects.  ReportLab parses XML-like tags
+            # inside paragraph text; unescaped content can cause parse errors
+            # or visual injection (HIGH severity).
+            safe_attack_id  = _xml_escape(str(attack_id))
+            safe_severity   = _xml_escape(str(severity))
+            safe_category   = _xml_escape(str(category))
+            safe_owasp_id   = _xml_escape(str(classification["owasp_id"]))
+            safe_owasp_name = _xml_escape(str(classification["name"]))
+
             story.append(Paragraph(
-                f'<font color="#f85149"><b>#{idx} — {attack_id}</b></font> '
-                f'&nbsp; Severity: <b>{severity}</b> &nbsp; Category: <b>{category}</b> '
-                f'&nbsp; OWASP: <b>{classification["owasp_id"]}</b> ({classification["name"]})',
+                f'<font color="#f85149"><b>#{idx} — {safe_attack_id}</b></font> '
+                f'&nbsp; Severity: <b>{safe_severity}</b> &nbsp; Category: <b>{safe_category}</b> '
+                f'&nbsp; OWASP: <b>{safe_owasp_id}</b> ({safe_owasp_name})',
                 body,
             ))
-            # Truncate long attack text
+            # Truncate then escape — truncate first so we escape only what is displayed.
             truncated_attack = (attack_text[:300] + "…") if len(attack_text) > 300 else attack_text
-            story.append(Paragraph(f"<b>Attack:</b> {truncated_attack}", small))
+            safe_attack = _xml_escape(truncated_attack)
+            story.append(Paragraph(f"<b>Attack:</b> {safe_attack}", small))
             truncated_response = (response[:200] + "…") if len(str(response)) > 200 else str(response)
-            story.append(Paragraph(f"<b>Response:</b> {truncated_response}", small))
+            safe_response = _xml_escape(truncated_response)
+            story.append(Paragraph(f"<b>Response:</b> {safe_response}", small))
             story.append(Spacer(1, 0.3 * cm))
             story.append(HRFlowable(width="100%", thickness=0.3, color=BORDER, spaceAfter=6))
 
