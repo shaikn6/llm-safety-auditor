@@ -12,7 +12,6 @@ from auditor.evaluator import SafetyEvaluator
 from auditor.mock_llm import MockLLM
 from replay.attack_replay import (
     DiffReport,
-    RegressionFinding,
     ReplayStore,
     StoredAttackRun,
     TimelinePoint,

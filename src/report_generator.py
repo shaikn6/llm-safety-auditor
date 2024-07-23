@@ -16,7 +16,6 @@ generate_report(audit_results, output_path, model_name="Unknown Model") -> str
 
 from __future__ import annotations
 
-import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -123,7 +122,7 @@ def generate_report(
     try:
         from reportlab.lib import colors
         from reportlab.lib.pagesizes import A4
-        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.styles import ParagraphStyle
         from reportlab.lib.units import cm
         from reportlab.platypus import (
             BaseDocTemplate,

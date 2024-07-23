@@ -10,11 +10,11 @@ Features:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Dict, List, Optional
 
 from auditor.attack_library import AttackCategory, Severity
-from auditor.evaluator import AuditReport, AttackResult
+from auditor.evaluator import AuditReport
 
 
 # ---------------------------------------------------------------------------
