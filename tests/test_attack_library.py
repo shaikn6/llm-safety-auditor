@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-import pytest
 
 from auditor.attack_library import (
     ALL_ATTACKS,
     AttackCategory,
-    AttackPrompt,
     Severity,
     get_attack_by_id,
     get_attacks_by_category,

@@ -9,11 +9,9 @@ from auditor.evaluator import SafetyEvaluator
 from auditor.mock_llm import MockLLM
 from scoring.owasp_scorer import (
     OWASP_LLM_V1_1,
-    OWASPCategoryScore,
     OWASPComplianceMatrix,
     OWASPScorer,
     SEVERITY_WEIGHTS,
-    SubCheckResult,
 )
 
 

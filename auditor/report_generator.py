@@ -12,10 +12,8 @@ PDF structure (ReportLab):
 from __future__ import annotations
 
 import json
-import os
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 from xml.sax.saxutils import escape as _xml_escape
 
 from .evaluator import AuditReport
@@ -177,7 +175,7 @@ def generate_pdf_report(report: AuditReport, output_path: str) -> str:
     # ------------------------------------------------------------------
     # Styles
     # ------------------------------------------------------------------
-    styles = getSampleStyleSheet()
+    getSampleStyleSheet()
     h1 = ParagraphStyle(
         "H1", fontName="Helvetica-Bold", fontSize=22, textColor=WHITE,
         spaceAfter=6, leading=28,

@@ -33,7 +33,6 @@ from auditor.attack_library import (
     AttackCategory,
     Severity,
     get_attack_by_id,
-    get_attacks_by_category,
     get_category_stats,
 )
 from auditor.detector import SafetyDetector

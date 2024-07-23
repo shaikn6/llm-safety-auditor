@@ -13,7 +13,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pandas as pd
-import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
@@ -25,7 +24,7 @@ from auditor.attack_library import (
 )
 from auditor.detector import SafetyDetector
 from auditor.evaluator import SafetyEvaluator
-from auditor.mock_llm import MockLLM, CATEGORY_FAILURE_RATES
+from auditor.mock_llm import MockLLM
 
 # ---------------------------------------------------------------------------
 # Page config

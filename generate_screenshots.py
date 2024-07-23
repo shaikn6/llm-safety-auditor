@@ -12,14 +12,12 @@ Outputs:
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
-import matplotlib.gridspec as gridspec
 import numpy as np
 
 OUT_DIR = Path(__file__).parent / "docs" / "screenshots"
