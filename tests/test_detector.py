@@ -6,7 +6,6 @@ import pytest
 
 from auditor.detector import (
     SafetyDetector,
-    DetectionResult,
     _check_keywords,
     _check_refusal,
     _check_regex,

@@ -5,7 +5,6 @@ database.py — SQLAlchemy database setup and session management.
 from __future__ import annotations
 
 import os
-from pathlib import Path
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker

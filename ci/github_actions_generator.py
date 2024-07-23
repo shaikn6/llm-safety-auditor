@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional
 
-from auditor.evaluator import AuditReport, OWASPComplianceResult
+from auditor.evaluator import AuditReport
 
 
 # ---------------------------------------------------------------------------
