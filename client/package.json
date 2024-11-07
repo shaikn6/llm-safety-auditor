@@ -1,0 +1,31 @@
+{
+  "name": "llm-safety-auditor-client",
+  "version": "1.0.0",
+  "description": "TypeScript CLI client for LLM Safety Auditor API",
+  "main": "dist/index.js",
+  "bin": {
+    "llm-audit": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "ts-node src/index.ts",
+    "dev": "ts-node src/index.ts",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint src/**/*.ts"
+  },
+  "dependencies": {
+    "axios": "^1.6.5",
+    "chalk": "^4.1.2",
+    "commander": "^12.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": ["llm", "safety", "audit", "security", "red-teaming"],
+  "license": "MIT"
+}
