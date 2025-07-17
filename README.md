@@ -3,6 +3,8 @@
 
 # LLM Safety Auditor — Automated Red-Teaming for LLM Deployments
 
+[![CI](https://github.com/shaikn6/llm-safety-auditor/actions/workflows/ci.yml/badge.svg)](https://github.com/shaikn6/llm-safety-auditor/actions)
+
 ![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-22c55e)
 ![Tests](https://img.shields.io/badge/Tests-passing-22c55e)
