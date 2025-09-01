@@ -29,8 +29,9 @@ jobs:
           pip install -r requirements.txt
       - name: Lint
         run: |
-          pip install flake8
-          flake8 . --max-line-length=120 --extend-ignore=E203,W503,E402,E221,E222,E225,E251,E261,E272,E302,E303,E305,E306,E127,E128,E231,E501,E701,E712,E741,F541,F841,F811 --exclude=.git,__pycache__,.venv,build,dist
+          pip install ruff
+          ruff check src/ tests/
+          ruff format --check src/ tests/
       - name: Test with coverage
         run: |
           pip install pytest pytest-cov
