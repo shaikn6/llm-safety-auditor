@@ -43,15 +43,6 @@ generate_report(audit_results, "report.pdf", model_name="GPT-4o")
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.111-green)
 ![Tests](https://img.shields.io/badge/Tests-pytest-orange)
 
-## Quick Start
-
-```bash
-git clone https://github.com/shaikn6/llm-safety-auditor.git
-cd llm-safety-auditor
-pip install -r requirements.txt
-pytest tests/                    # run test suite
-streamlit run dashboard/app_v2.py    # launch dashboard
-```
 
 ## Situation
 
@@ -177,6 +168,7 @@ LLM Response
 ```
 
 ---
+
 
 ## Quick Start
 
