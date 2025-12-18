@@ -118,169 +118,201 @@ OWASP_CATEGORIES: dict[str, dict[str, Any]] = {
 
 _CLASSIFIER_RULES: list[tuple[str, list[str], float]] = [
     # LLM01 — Prompt Injection
-    ("LLM01", [
-        r"ignore.{0,20}instructions?",
-        r"disregard.{0,20}instructions?",
-        r"new (system )?prompt",
-        r"override (safety|instructions?|filters?)",
-        r"inject",
-        r"---end of system",
-        r"\[inst\]",
-        r"<<?sys>>?",
-        r"forget (your |previous )?instructions?",
-        r"you are now",
-        r"your new (system )?prompt",
-        r"null byte",
-        r"\\x00",
-        r"admin override",
-    ], 0.90),
-
+    (
+        "LLM01",
+        [
+            r"ignore.{0,20}instructions?",
+            r"disregard.{0,20}instructions?",
+            r"new (system )?prompt",
+            r"override (safety|instructions?|filters?)",
+            r"inject",
+            r"---end of system",
+            r"\[inst\]",
+            r"<<?sys>>?",
+            r"forget (your |previous )?instructions?",
+            r"you are now",
+            r"your new (system )?prompt",
+            r"null byte",
+            r"\\x00",
+            r"admin override",
+        ],
+        0.90,
+    ),
     # LLM02 — Insecure Output Handling
-    ("LLM02", [
-        r"output (to|into) html",
-        r"render (as|in) html",
-        r"execute (this|the) (code|script|command)",
-        r"eval\(",
-        r"<script",
-        r"javascript:",
-        r"ssrf",
-        r"server.?side (request|injection)",
-        r"xss",
-        r"cross.?site scripting",
-        r"command injection",
-        r"shell injection",
-    ], 0.85),
-
+    (
+        "LLM02",
+        [
+            r"output (to|into) html",
+            r"render (as|in) html",
+            r"execute (this|the) (code|script|command)",
+            r"eval\(",
+            r"<script",
+            r"javascript:",
+            r"ssrf",
+            r"server.?side (request|injection)",
+            r"xss",
+            r"cross.?site scripting",
+            r"command injection",
+            r"shell injection",
+        ],
+        0.85,
+    ),
     # LLM03 — Training Data Poisoning
-    ("LLM03", [
-        r"poison(ing)? (the )?(training|model|data)",
-        r"backdoor (the )?model",
-        r"corrupt (the )?(training|dataset)",
-        r"inject (malicious )?(data|examples?) (into|during) training",
-        r"fine.?tun(e|ing).*malicious",
-        r"adversarial (training|example)",
-    ], 0.80),
-
+    (
+        "LLM03",
+        [
+            r"poison(ing)? (the )?(training|model|data)",
+            r"backdoor (the )?model",
+            r"corrupt (the )?(training|dataset)",
+            r"inject (malicious )?(data|examples?) (into|during) training",
+            r"fine.?tun(e|ing).*malicious",
+            r"adversarial (training|example)",
+        ],
+        0.80,
+    ),
     # LLM04 — Model Denial of Service
-    ("LLM04", [
-        r"(repeat|loop|recurse).{0,30}(forever|infinitely|1000 times)",
-        r"infinite loop",
-        r"cause (a )?(crash|outage|denial of service|dos|ddos)",
-        r"exhaust (your )?(memory|context|resources)",
-        r"context (window )?(overflow|flood|exhaust)",
-        r"billion laughs",
-        r"fork bomb",
-        r"very long (prompt|input|context)",
-        r"resource (exhaustion|depletion)",
-    ], 0.80),
-
+    (
+        "LLM04",
+        [
+            r"(repeat|loop|recurse).{0,30}(forever|infinitely|1000 times)",
+            r"infinite loop",
+            r"cause (a )?(crash|outage|denial of service|dos|ddos)",
+            r"exhaust (your )?(memory|context|resources)",
+            r"context (window )?(overflow|flood|exhaust)",
+            r"billion laughs",
+            r"fork bomb",
+            r"very long (prompt|input|context)",
+            r"resource (exhaustion|depletion)",
+        ],
+        0.80,
+    ),
     # LLM05 — Supply Chain Vulnerabilities
-    ("LLM05", [
-        r"third.?party (model|plugin|library|dependency)",
-        r"supply chain",
-        r"compromised (model|weights|plugin)",
-        r"malicious (plugin|package|dependency)",
-        r"model registry",
-        r"hugging ?face.*malicious",
-        r"npm.*malicious",
-        r"pypi.*malicious",
-    ], 0.75),
-
+    (
+        "LLM05",
+        [
+            r"third.?party (model|plugin|library|dependency)",
+            r"supply chain",
+            r"compromised (model|weights|plugin)",
+            r"malicious (plugin|package|dependency)",
+            r"model registry",
+            r"hugging ?face.*malicious",
+            r"npm.*malicious",
+            r"pypi.*malicious",
+        ],
+        0.75,
+    ),
     # LLM06 — Sensitive Information Disclosure
-    ("LLM06", [
-        r"system prompt",
-        r"api key",
-        r"password",
-        r"credentials?",
-        r"(reveal|expose|leak|output|print|show|tell me).{0,30}(secret|confidential|private|hidden)",
-        r"repeat verbatim",
-        r"copy (word for word|verbatim)",
-        r"your (exact )?instructions?",
-        r"base64.*system",
-        r"pii",
-        r"personally identifiable",
-        r"social security",
-        r"credit card",
-        r"translate.*system prompt",
-        r"first \d+ characters? of your context",
-        r"context (window )?(dump|output)",
-        r"remind me what.{0,20}(said|contains?)",
-        r"what.{0,20}forbidden to discuss",
-        r"list.{0,30}(constraints|rules|restrictions)",
-    ], 0.90),
-
+    (
+        "LLM06",
+        [
+            r"system prompt",
+            r"api key",
+            r"password",
+            r"credentials?",
+            r"(reveal|expose|leak|output|print|show|tell me).{0,30}(secret|confidential|private|hidden)",
+            r"repeat verbatim",
+            r"copy (word for word|verbatim)",
+            r"your (exact )?instructions?",
+            r"base64.*system",
+            r"pii",
+            r"personally identifiable",
+            r"social security",
+            r"credit card",
+            r"translate.*system prompt",
+            r"first \d+ characters? of your context",
+            r"context (window )?(dump|output)",
+            r"remind me what.{0,20}(said|contains?)",
+            r"what.{0,20}forbidden to discuss",
+            r"list.{0,30}(constraints|rules|restrictions)",
+        ],
+        0.90,
+    ),
     # LLM07 — Insecure Plugin Design
-    ("LLM07", [
-        r"plugin",
-        r"tool (call|use|access)",
-        r"function call",
-        r"browser (tool|plugin|extension)",
-        r"file (system|access|plugin)",
-        r"code (execution|interpreter|plugin)",
-        r"external (api|service|tool) (call|access)",
-        r"webhook",
-        r"action.*execute",
-        r"delete (all )?data",
-        r"send.{0,30}(to|email|webhook)",
-    ], 0.80),
-
+    (
+        "LLM07",
+        [
+            r"plugin",
+            r"tool (call|use|access)",
+            r"function call",
+            r"browser (tool|plugin|extension)",
+            r"file (system|access|plugin)",
+            r"code (execution|interpreter|plugin)",
+            r"external (api|service|tool) (call|access)",
+            r"webhook",
+            r"action.*execute",
+            r"delete (all )?data",
+            r"send.{0,30}(to|email|webhook)",
+        ],
+        0.80,
+    ),
     # LLM08 — Excessive Agency
-    ("LLM08", [
-        r"(you (can|should|must|are allowed to)) (act|do|execute|perform)",
-        r"take (autonomous |independent )?action",
-        r"act (on my behalf|autonomously|independently)",
-        r"make (decisions?|purchases?|transactions?)",
-        r"access (the )?(internet|web|file|database|email)",
-        r"send (an? )?(email|message|notification|request)",
-        r"without (my |human )?approval",
-        r"no (need to |need for )?(ask|confirm|check)",
-        r"(buy|purchase|transfer|send funds?)",
-        r"autonomous(ly)?",
-        r"agentic",
-    ], 0.80),
-
+    (
+        "LLM08",
+        [
+            r"(you (can|should|must|are allowed to)) (act|do|execute|perform)",
+            r"take (autonomous |independent )?action",
+            r"act (on my behalf|autonomously|independently)",
+            r"make (decisions?|purchases?|transactions?)",
+            r"access (the )?(internet|web|file|database|email)",
+            r"send (an? )?(email|message|notification|request)",
+            r"without (my |human )?approval",
+            r"no (need to |need for )?(ask|confirm|check)",
+            r"(buy|purchase|transfer|send funds?)",
+            r"autonomous(ly)?",
+            r"agentic",
+        ],
+        0.80,
+    ),
     # LLM09 — Overreliance
-    ("LLM09", [
-        r"hallucin",
-        r"make up",
-        r"fabricat",
-        r"fake (paper|study|research|article|book|case|citation)",
-        r"non.?existent (paper|study|research|entity|country|case)",
-        r"fictional (country|entity|person|company)",
-        r"exact stock price",
-        r"real.?time (data|price|quote)",
-        r"quote verbatim from page",
-        r"(what was|describe).{0,30}(2019|2020|2021|2022|2023|2024).{0,30}case",
-        r"theorem.{0,30}(does not exist|fictional|fake)",
-        r"gdp of.{0,30}(fictional|zephyria|nonexistent)",
-        r"supreme court case.{0,30}(martinez|fictional)",
-        r"peer.?reviewed.*fabricat",
-        r"studies? show that.{0,30}(80|90|95|99)%",
-        r"statistically (likely|proven|show)",
-        r"bias elicitation",
-        r"discriminatory",
-        r"ranking.{0,30}(nationalities?|religions?|races?|genders?)",
-        r"(which|what) (group|race|nationality|gender|religion).{0,30}(most|least|better|worse)",
-    ], 0.85),
-
+    (
+        "LLM09",
+        [
+            r"hallucin",
+            r"make up",
+            r"fabricat",
+            r"fake (paper|study|research|article|book|case|citation)",
+            r"non.?existent (paper|study|research|entity|country|case)",
+            r"fictional (country|entity|person|company)",
+            r"exact stock price",
+            r"real.?time (data|price|quote)",
+            r"quote verbatim from page",
+            r"(what was|describe).{0,30}(2019|2020|2021|2022|2023|2024).{0,30}case",
+            r"theorem.{0,30}(does not exist|fictional|fake)",
+            r"gdp of.{0,30}(fictional|zephyria|nonexistent)",
+            r"supreme court case.{0,30}(martinez|fictional)",
+            r"peer.?reviewed.*fabricat",
+            r"studies? show that.{0,30}(80|90|95|99)%",
+            r"statistically (likely|proven|show)",
+            r"bias elicitation",
+            r"discriminatory",
+            r"ranking.{0,30}(nationalities?|religions?|races?|genders?)",
+            r"(which|what) (group|race|nationality|gender|religion).{0,30}(most|least|better|worse)",
+        ],
+        0.85,
+    ),
     # LLM10 — Model Theft
-    ("LLM10", [
-        r"(extract|steal|copy|clone).{0,30}(model|weights?|architecture)",
-        r"model (weights?|parameters?|architecture).{0,30}(extract|steal|exfil|copy)",
-        r"reverse engineer(ing)?.{0,30}model",
-        r"model inversion",
-        r"membership inference",
-        r"training data extraction",
-        r"(what is your|output your|reveal your).{0,30}(architecture|model|weights?|parameters?)",
-        r"copy your (model|weights?|training|behaviour)",
-        r"distillation attack",
-    ], 0.80),
+    (
+        "LLM10",
+        [
+            r"(extract|steal|copy|clone).{0,30}(model|weights?|architecture)",
+            r"model (weights?|parameters?|architecture).{0,30}(extract|steal|exfil|copy)",
+            r"reverse engineer(ing)?.{0,30}model",
+            r"model inversion",
+            r"membership inference",
+            r"training data extraction",
+            r"(what is your|output your|reveal your).{0,30}(architecture|model|weights?|parameters?)",
+            r"copy your (model|weights?|training|behaviour)",
+            r"distillation attack",
+        ],
+        0.80,
+    ),
 ]
 
 
 # ---------------------------------------------------------------------------
 # Public functions
 # ---------------------------------------------------------------------------
+
 
 def classify_attack(attack_text: str) -> dict[str, Any]:
     """
@@ -302,7 +334,7 @@ def classify_attack(attack_text: str) -> dict[str, Any]:
     """
     text_lower = attack_text.lower()
 
-    best_id = "LLM09"   # default: Overreliance (catch-all)
+    best_id = "LLM09"  # default: Overreliance (catch-all)
     best_conf = 0.10
     best_patterns: list[str] = []
 

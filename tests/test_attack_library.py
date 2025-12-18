@@ -42,7 +42,9 @@ class TestAttackPromptStructure:
 
     def test_all_attacks_have_expected_behavior(self):
         for attack in ALL_ATTACKS:
-            assert attack.expected_behavior.strip(), f"Empty expected_behavior for {attack.id}"
+            assert attack.expected_behavior.strip(), (
+                f"Empty expected_behavior for {attack.id}"
+            )
 
     def test_all_attacks_have_valid_owasp_ref(self):
         valid_owasp_refs = set(OWASP_MAPPING.values())
@@ -58,7 +60,9 @@ class TestAttackPromptStructure:
 
     def test_all_attacks_have_tags(self):
         for attack in ALL_ATTACKS:
-            assert isinstance(attack.tags, list), f"Tags should be a list for {attack.id}"
+            assert isinstance(attack.tags, list), (
+                f"Tags should be a list for {attack.id}"
+            )
 
 
 class TestGetAttackById:
@@ -146,7 +150,11 @@ class TestCategoryStats:
 class TestJailbreakSpecific:
     def test_jb001_is_dan_attack(self):
         attack = get_attack_by_id("JB-001")
-        assert "DAN" in attack.template or "Dan" in attack.template or "dan" in attack.tags[0]
+        assert (
+            "DAN" in attack.template
+            or "Dan" in attack.template
+            or "dan" in attack.tags[0]
+        )
 
     def test_jb010_has_critical_severity(self):
         attack = get_attack_by_id("JB-010")
