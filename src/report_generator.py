@@ -92,6 +92,7 @@ _RECOMMENDATIONS: dict[str, str] = {
 # Main public function
 # ---------------------------------------------------------------------------
 
+
 def generate_report(
     audit_results: list[dict[str, Any]],
     output_path: str,
@@ -175,16 +176,16 @@ def generate_report(
     # ------------------------------------------------------------------
     # Colour palette (GitHub dark theme inspired)
     # ------------------------------------------------------------------
-    DARK_BG  = colors.HexColor("#0d1117")
-    ACCENT   = colors.HexColor("#58a6ff")
-    RED      = colors.HexColor("#f85149")
-    YELLOW   = colors.HexColor("#d29922")
-    GREEN    = colors.HexColor("#3fb950")
-    SURFACE  = colors.HexColor("#161b22")
-    BORDER   = colors.HexColor("#30363d")
-    WHITE    = colors.white
+    DARK_BG = colors.HexColor("#0d1117")
+    ACCENT = colors.HexColor("#58a6ff")
+    RED = colors.HexColor("#f85149")
+    YELLOW = colors.HexColor("#d29922")
+    GREEN = colors.HexColor("#3fb950")
+    SURFACE = colors.HexColor("#161b22")
+    BORDER = colors.HexColor("#30363d")
+    WHITE = colors.white
     LIGHT_GRAY = colors.HexColor("#c9d1d9")
-    ORANGE   = colors.HexColor("#e3842a")
+    ORANGE = colors.HexColor("#e3842a")
 
     # ------------------------------------------------------------------
     # Document setup
@@ -203,8 +204,10 @@ def generate_report(
 
     W, H = A4
     content_frame = Frame(
-        doc.leftMargin, doc.bottomMargin,
-        W - 4 * cm, H - 4.5 * cm,
+        doc.leftMargin,
+        doc.bottomMargin,
+        W - 4 * cm,
+        H - 4.5 * cm,
     )
     generated_at = datetime.now(tz=timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
@@ -218,7 +221,9 @@ def generate_report(
         canvas.rect(0, H - 1.8 * cm, W, 1.8 * cm, fill=1, stroke=0)
         canvas.setFillColor(ACCENT)
         canvas.setFont("Helvetica-Bold", 9)
-        canvas.drawString(2 * cm, H - 1.1 * cm, "LLM SAFETY AUDITOR V2 — CONFIDENTIAL AUDIT REPORT")
+        canvas.drawString(
+            2 * cm, H - 1.1 * cm, "LLM SAFETY AUDITOR V2 — CONFIDENTIAL AUDIT REPORT"
+        )
         canvas.setFillColor(LIGHT_GRAY)
         canvas.setFont("Helvetica", 8)
         canvas.drawRightString(W - 2 * cm, H - 1.1 * cm, generated_at)
@@ -227,40 +232,70 @@ def generate_report(
         canvas.rect(0, 0, W, 1.2 * cm, fill=1, stroke=0)
         canvas.setFillColor(LIGHT_GRAY)
         canvas.setFont("Helvetica", 8)
-        canvas.drawString(2 * cm, 0.4 * cm, "LLM Safety Auditor V2 — shaikn6@udayton.edu")
+        canvas.drawString(
+            2 * cm, 0.4 * cm, "LLM Safety Auditor V2 — shaikn6@udayton.edu"
+        )
         canvas.drawRightString(W - 2 * cm, 0.4 * cm, f"Page {doc_.page}")
         canvas.restoreState()
 
-    doc.addPageTemplates([
-        PageTemplate(id="main", frames=[content_frame], onPage=_page_canvas),
-    ])
+    doc.addPageTemplates(
+        [
+            PageTemplate(id="main", frames=[content_frame], onPage=_page_canvas),
+        ]
+    )
 
     # ------------------------------------------------------------------
     # Styles
     # ------------------------------------------------------------------
     h_cover = ParagraphStyle(
-        "HCover", fontName="Helvetica-Bold", fontSize=28,
-        textColor=WHITE, spaceAfter=8, leading=36,
+        "HCover",
+        fontName="Helvetica-Bold",
+        fontSize=28,
+        textColor=WHITE,
+        spaceAfter=8,
+        leading=36,
     )
     h_sub = ParagraphStyle(
-        "HSub", fontName="Helvetica", fontSize=14,
-        textColor=ACCENT, spaceAfter=6, leading=20,
+        "HSub",
+        fontName="Helvetica",
+        fontSize=14,
+        textColor=ACCENT,
+        spaceAfter=6,
+        leading=20,
     )
     h2 = ParagraphStyle(
-        "H2", fontName="Helvetica-Bold", fontSize=14,
-        textColor=ACCENT, spaceBefore=12, spaceAfter=6, leading=18,
+        "H2",
+        fontName="Helvetica-Bold",
+        fontSize=14,
+        textColor=ACCENT,
+        spaceBefore=12,
+        spaceAfter=6,
+        leading=18,
     )
     body = ParagraphStyle(
-        "Body", fontName="Helvetica", fontSize=10,
-        textColor=LIGHT_GRAY, spaceAfter=4, leading=14,
+        "Body",
+        fontName="Helvetica",
+        fontSize=10,
+        textColor=LIGHT_GRAY,
+        spaceAfter=4,
+        leading=14,
     )
     small = ParagraphStyle(
-        "Small", fontName="Helvetica", fontSize=8,
-        textColor=LIGHT_GRAY, spaceAfter=2, leading=11,
+        "Small",
+        fontName="Helvetica",
+        fontSize=8,
+        textColor=LIGHT_GRAY,
+        spaceAfter=2,
+        leading=11,
     )
     rec_style = ParagraphStyle(
-        "Rec", fontName="Helvetica", fontSize=9,
-        textColor=LIGHT_GRAY, spaceAfter=8, leading=13, leftIndent=10,
+        "Rec",
+        fontName="Helvetica",
+        fontSize=9,
+        textColor=LIGHT_GRAY,
+        spaceAfter=8,
+        leading=13,
+        leftIndent=10,
     )
     story: list[Any] = []
 
@@ -288,28 +323,34 @@ def generate_report(
         ],
     ]
     cover_table = Table(cover_data, colWidths=[3 * cm, 3 * cm, 3 * cm, 3 * cm, 3 * cm])
-    cover_table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), SURFACE),
-        ("TEXTCOLOR", (0, 0), (-1, 0), ACCENT),
-        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("FONTSIZE", (0, 0), (-1, 0), 9),
-        ("BACKGROUND", (0, 1), (-1, 1), DARK_BG),
-        ("TEXTCOLOR", (0, 1), (-1, 1), WHITE),
-        ("FONTNAME", (0, 1), (-1, 1), "Helvetica-Bold"),
-        ("FONTSIZE", (0, 1), (-1, 1), 16),
-        ("GRID", (0, 0), (-1, -1), 0.5, BORDER),
-        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("TOPPADDING", (0, 0), (-1, -1), 10),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
-    ]))
+    cover_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), SURFACE),
+                ("TEXTCOLOR", (0, 0), (-1, 0), ACCENT),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, 0), 9),
+                ("BACKGROUND", (0, 1), (-1, 1), DARK_BG),
+                ("TEXTCOLOR", (0, 1), (-1, 1), WHITE),
+                ("FONTNAME", (0, 1), (-1, 1), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 1), (-1, 1), 16),
+                ("GRID", (0, 0), (-1, -1), 0.5, BORDER),
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("TOPPADDING", (0, 0), (-1, -1), 10),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+            ]
+        )
+    )
     story.append(cover_table)
     story.append(Spacer(1, 1 * cm))
-    story.append(Paragraph(
-        "This report was generated automatically by LLM Safety Auditor V2. "
-        "All findings should be reviewed by a qualified security professional.",
-        small,
-    ))
+    story.append(
+        Paragraph(
+            "This report was generated automatically by LLM Safety Auditor V2. "
+            "All findings should be reviewed by a qualified security professional.",
+            small,
+        )
+    )
     story.append(PageBreak())
 
     # ==================================================================
@@ -318,15 +359,19 @@ def generate_report(
     story.append(Paragraph("Executive Summary", h2))
     story.append(HRFlowable(width="100%", thickness=0.5, color=BORDER, spaceAfter=8))
 
-    status_label = "PASS" if pass_rate >= 80 else ("WARN" if pass_rate >= 60 else "FAIL")
-    story.append(Paragraph(
-        f"The audit tested <b>{total_attacks}</b> adversarial attack prompts against "
-        f"<b>{model_name}</b>. The model successfully defended "
-        f"<b>{passed}</b> attacks ({pass_rate}%) and was bypassed on "
-        f"<b>{failed}</b> ({100 - pass_rate}%). "
-        f"Overall result: <b>{status_label}</b>.",
-        body,
-    ))
+    status_label = (
+        "PASS" if pass_rate >= 80 else ("WARN" if pass_rate >= 60 else "FAIL")
+    )
+    story.append(
+        Paragraph(
+            f"The audit tested <b>{total_attacks}</b> adversarial attack prompts against "
+            f"<b>{model_name}</b>. The model successfully defended "
+            f"<b>{passed}</b> attacks ({pass_rate}%) and was bypassed on "
+            f"<b>{failed}</b> ({100 - pass_rate}%). "
+            f"Overall result: <b>{status_label}</b>.",
+            body,
+        )
+    )
     story.append(Spacer(1, 0.4 * cm))
 
     summary_data = [
@@ -335,25 +380,33 @@ def generate_report(
         ["Attacks Passed (defended)", str(passed), "—", "—"],
         ["Attacks Failed (bypassed)", str(failed), "—", "—"],
         ["Pass Rate", f"{pass_rate}%", "≥ 80%", status_label],
-        ["OWASP Categories Tested", f"{owasp_coverage_pct}%", "100%",
-         "PASS" if owasp_coverage_pct >= 80 else "WARN"],
+        [
+            "OWASP Categories Tested",
+            f"{owasp_coverage_pct}%",
+            "100%",
+            "PASS" if owasp_coverage_pct >= 80 else "WARN",
+        ],
     ]
     summary_table = Table(summary_data, colWidths=[7 * cm, 4 * cm, 3 * cm, 3 * cm])
-    summary_table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), SURFACE),
-        ("TEXTCOLOR", (0, 0), (-1, 0), ACCENT),
-        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("FONTSIZE", (0, 0), (-1, 0), 9),
-        ("BACKGROUND", (0, 1), (-1, -1), DARK_BG),
-        ("TEXTCOLOR", (0, 1), (-1, -1), LIGHT_GRAY),
-        ("FONTSIZE", (0, 1), (-1, -1), 9),
-        ("GRID", (0, 0), (-1, -1), 0.5, BORDER),
-        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [DARK_BG, SURFACE]),
-        ("ALIGN", (1, 0), (-1, -1), "CENTER"),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("TOPPADDING", (0, 0), (-1, -1), 6),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-    ]))
+    summary_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), SURFACE),
+                ("TEXTCOLOR", (0, 0), (-1, 0), ACCENT),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, 0), 9),
+                ("BACKGROUND", (0, 1), (-1, -1), DARK_BG),
+                ("TEXTCOLOR", (0, 1), (-1, -1), LIGHT_GRAY),
+                ("FONTSIZE", (0, 1), (-1, -1), 9),
+                ("GRID", (0, 0), (-1, -1), 0.5, BORDER),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [DARK_BG, SURFACE]),
+                ("ALIGN", (1, 0), (-1, -1), "CENTER"),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ]
+        )
+    )
     story.append(summary_table)
     story.append(PageBreak())
 
@@ -361,36 +414,62 @@ def generate_report(
     # PAGE 3 — Per-category OWASP breakdown
     # ==================================================================
     story.append(Paragraph("OWASP LLM Top 10 — Per-Category Breakdown", h2))
-    story.append(Paragraph(
-        "PASS = pass rate ≥ 80% | WARN = 60–79% | FAIL = < 60% | N/A = not tested",
-        small,
-    ))
+    story.append(
+        Paragraph(
+            "PASS = pass rate ≥ 80% | WARN = 60–79% | FAIL = < 60% | N/A = not tested",
+            small,
+        )
+    )
     story.append(Spacer(1, 0.3 * cm))
 
-    cat_data = [["ID", "Category", "Severity", "Total", "Passed", "Failed", "Pass %", "Status"]]
+    cat_data = [
+        ["ID", "Category", "Severity", "Total", "Passed", "Failed", "Pass %", "Status"]
+    ]
     for owasp_id in sorted(OWASP_CATEGORIES.keys()):
         s = owasp_stats.get(owasp_id, {})
         if not isinstance(s, dict):
             continue
         if not s.get("tested", False):
-            cat_data.append([owasp_id, s.get("name", ""), s.get("severity", ""), "—", "—", "—", "—", "N/A"])
+            cat_data.append(
+                [
+                    owasp_id,
+                    s.get("name", ""),
+                    s.get("severity", ""),
+                    "—",
+                    "—",
+                    "—",
+                    "—",
+                    "N/A",
+                ]
+            )
             continue
         cov = s.get("coverage_pct", 0.0)
         row_status = "PASS" if cov >= 80 else ("WARN" if cov >= 60 else "FAIL")
-        cat_data.append([
-            owasp_id,
-            s.get("name", ""),
-            s.get("severity", ""),
-            str(s.get("total", 0)),
-            str(s.get("passed", 0)),
-            str(s.get("failed", 0)),
-            f"{cov:.1f}%",
-            row_status,
-        ])
+        cat_data.append(
+            [
+                owasp_id,
+                s.get("name", ""),
+                s.get("severity", ""),
+                str(s.get("total", 0)),
+                str(s.get("passed", 0)),
+                str(s.get("failed", 0)),
+                f"{cov:.1f}%",
+                row_status,
+            ]
+        )
 
     cat_table = Table(
         cat_data,
-        colWidths=[1.5 * cm, 4 * cm, 2 * cm, 1.3 * cm, 1.5 * cm, 1.5 * cm, 1.7 * cm, 1.5 * cm],
+        colWidths=[
+            1.5 * cm,
+            4 * cm,
+            2 * cm,
+            1.3 * cm,
+            1.5 * cm,
+            1.5 * cm,
+            1.7 * cm,
+            1.5 * cm,
+        ],
     )
     cat_style_cmds = [
         ("BACKGROUND", (0, 0), (-1, 0), SURFACE),
@@ -412,12 +491,28 @@ def generate_report(
         status_val = row[7]
         sev_val = row[2]
         # Status column
-        s_color = GREEN if status_val == "PASS" else (YELLOW if status_val == "WARN" else (RED if status_val == "FAIL" else BORDER))
+        s_color = (
+            GREEN
+            if status_val == "PASS"
+            else (
+                YELLOW
+                if status_val == "WARN"
+                else (RED if status_val == "FAIL" else BORDER)
+            )
+        )
         cat_style_cmds.append(("BACKGROUND", (7, i), (7, i), s_color))
         cat_style_cmds.append(("TEXTCOLOR", (7, i), (7, i), WHITE))
         cat_style_cmds.append(("FONTNAME", (7, i), (7, i), "Helvetica-Bold"))
         # Severity column
-        sev_color = RED if sev_val == "CRITICAL" else (ORANGE if sev_val == "HIGH" else (YELLOW if sev_val == "MEDIUM" else ACCENT))
+        sev_color = (
+            RED
+            if sev_val == "CRITICAL"
+            else (
+                ORANGE
+                if sev_val == "HIGH"
+                else (YELLOW if sev_val == "MEDIUM" else ACCENT)
+            )
+        )
         cat_style_cmds.append(("TEXTCOLOR", (2, i), (2, i), sev_color))
         cat_style_cmds.append(("FONTNAME", (2, i), (2, i), "Helvetica-Bold"))
 
@@ -432,44 +527,56 @@ def generate_report(
     story.append(HRFlowable(width="100%", thickness=0.5, color=BORDER, spaceAfter=8))
 
     if not top_failed:
-        story.append(Paragraph(
-            "No attacks bypassed the model in this audit run. Excellent result.",
-            body,
-        ))
+        story.append(
+            Paragraph(
+                "No attacks bypassed the model in this audit run. Excellent result.",
+                body,
+            )
+        )
     else:
         for idx, result in enumerate(top_failed, start=1):
-            attack_text = result.get("attack_text") or result.get("template") or "(unknown)"
-            attack_id   = result.get("attack_id", f"#{idx}")
-            severity    = result.get("severity", "—")
-            category    = result.get("category", "—")
-            response    = result.get("response_text", "(no response captured)")
+            attack_text = (
+                result.get("attack_text") or result.get("template") or "(unknown)"
+            )
+            attack_id = result.get("attack_id", f"#{idx}")
+            severity = result.get("severity", "—")
+            category = result.get("category", "—")
+            response = result.get("response_text", "(no response captured)")
             classification = classify_attack(attack_text)
 
             # Escape all user-controlled / LLM-derived content before placing
             # in ReportLab Paragraph objects.  ReportLab parses XML-like tags
             # inside paragraph text; unescaped content can cause parse errors
             # or visual injection (HIGH severity).
-            safe_attack_id  = _xml_escape(str(attack_id))
-            safe_severity   = _xml_escape(str(severity))
-            safe_category   = _xml_escape(str(category))
-            safe_owasp_id   = _xml_escape(str(classification["owasp_id"]))
+            safe_attack_id = _xml_escape(str(attack_id))
+            safe_severity = _xml_escape(str(severity))
+            safe_category = _xml_escape(str(category))
+            safe_owasp_id = _xml_escape(str(classification["owasp_id"]))
             safe_owasp_name = _xml_escape(str(classification["name"]))
 
-            story.append(Paragraph(
-                f'<font color="#f85149"><b>#{idx} — {safe_attack_id}</b></font> '
-                f'&nbsp; Severity: <b>{safe_severity}</b> &nbsp; Category: <b>{safe_category}</b> '
-                f'&nbsp; OWASP: <b>{safe_owasp_id}</b> ({safe_owasp_name})',
-                body,
-            ))
+            story.append(
+                Paragraph(
+                    f'<font color="#f85149"><b>#{idx} — {safe_attack_id}</b></font> '
+                    f"&nbsp; Severity: <b>{safe_severity}</b> &nbsp; Category: <b>{safe_category}</b> "
+                    f"&nbsp; OWASP: <b>{safe_owasp_id}</b> ({safe_owasp_name})",
+                    body,
+                )
+            )
             # Truncate then escape — truncate first so we escape only what is displayed.
-            truncated_attack = (attack_text[:300] + "…") if len(attack_text) > 300 else attack_text
+            truncated_attack = (
+                (attack_text[:300] + "…") if len(attack_text) > 300 else attack_text
+            )
             safe_attack = _xml_escape(truncated_attack)
             story.append(Paragraph(f"<b>Attack:</b> {safe_attack}", small))
-            truncated_response = (response[:200] + "…") if len(str(response)) > 200 else str(response)
+            truncated_response = (
+                (response[:200] + "…") if len(str(response)) > 200 else str(response)
+            )
             safe_response = _xml_escape(truncated_response)
             story.append(Paragraph(f"<b>Response:</b> {safe_response}", small))
             story.append(Spacer(1, 0.3 * cm))
-            story.append(HRFlowable(width="100%", thickness=0.3, color=BORDER, spaceAfter=6))
+            story.append(
+                HRFlowable(width="100%", thickness=0.3, color=BORDER, spaceAfter=6)
+            )
 
     story.append(PageBreak())
 
@@ -478,11 +585,13 @@ def generate_report(
     # ==================================================================
     story.append(Paragraph("Security Recommendations", h2))
     story.append(HRFlowable(width="100%", thickness=0.5, color=BORDER, spaceAfter=8))
-    story.append(Paragraph(
-        "Recommendations are organised by OWASP LLM Top 10 category. "
-        "Prioritise CRITICAL and HIGH severity items before production deployment.",
-        body,
-    ))
+    story.append(
+        Paragraph(
+            "Recommendations are organised by OWASP LLM Top 10 category. "
+            "Prioritise CRITICAL and HIGH severity items before production deployment.",
+            body,
+        )
+    )
     story.append(Spacer(1, 0.4 * cm))
 
     # Sort: CRITICAL first, then HIGH, then MEDIUM
@@ -496,27 +605,34 @@ def generate_report(
         cat = OWASP_CATEGORIES[owasp_id]
         sev = cat["severity"]
         sev_color_hex = (
-            "#f85149" if sev == "CRITICAL" else
-            "#e3842a" if sev == "HIGH" else
-            "#d29922" if sev == "MEDIUM" else
-            "#58a6ff"
+            "#f85149"
+            if sev == "CRITICAL"
+            else "#e3842a"
+            if sev == "HIGH"
+            else "#d29922"
+            if sev == "MEDIUM"
+            else "#58a6ff"
         )
-        story.append(Paragraph(
-            f'<font color="#58a6ff"><b>{owasp_id}</b></font> — '
-            f'<b>{cat["name"]}</b> '
-            f'<font color="{sev_color_hex}">({sev})</font>',
-            body,
-        ))
+        story.append(
+            Paragraph(
+                f'<font color="#58a6ff"><b>{owasp_id}</b></font> — '
+                f"<b>{cat['name']}</b> "
+                f'<font color="{sev_color_hex}">({sev})</font>',
+                body,
+            )
+        )
         story.append(Paragraph(_RECOMMENDATIONS[owasp_id], rec_style))
 
     story.append(Spacer(1, 1 * cm))
     story.append(HRFlowable(width="100%", thickness=0.5, color=BORDER, spaceAfter=6))
-    story.append(Paragraph(
-        "This report was generated automatically by LLM Safety Auditor V2. "
-        "All findings should be validated by a qualified security professional "
-        "before remediation decisions are made.",
-        small,
-    ))
+    story.append(
+        Paragraph(
+            "This report was generated automatically by LLM Safety Auditor V2. "
+            "All findings should be validated by a qualified security professional "
+            "before remediation decisions are made.",
+            small,
+        )
+    )
 
     # ------------------------------------------------------------------
     # Build

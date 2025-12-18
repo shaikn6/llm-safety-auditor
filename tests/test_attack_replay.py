@@ -22,6 +22,7 @@ from replay.attack_replay import (
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def tmp_db():
     with tempfile.TemporaryDirectory() as tmp:
@@ -46,6 +47,7 @@ def _make_report(seed: int = 42, session_id: str = "test"):
 # Store creation and schema
 # ---------------------------------------------------------------------------
 
+
 class TestReplayStoreInit:
     def test_creates_db_file(self, tmp_db):
         store = ReplayStore(db_path=tmp_db)
@@ -67,6 +69,7 @@ class TestReplayStoreInit:
 # ---------------------------------------------------------------------------
 # Save and retrieve runs
 # ---------------------------------------------------------------------------
+
 
 class TestSaveAndRetrieve:
     def test_save_run_stores_attack_rows(self, store):
@@ -115,6 +118,7 @@ class TestSaveAndRetrieve:
 # ---------------------------------------------------------------------------
 # Diff report
 # ---------------------------------------------------------------------------
+
 
 class TestDiffReport:
     def test_diff_report_structure(self, store):
@@ -182,6 +186,7 @@ class TestDiffReport:
 # Timeline
 # ---------------------------------------------------------------------------
 
+
 class TestTimeline:
     def test_empty_timeline(self, store):
         timeline = store.safety_timeline()
@@ -207,6 +212,7 @@ class TestTimeline:
 # ---------------------------------------------------------------------------
 # Regression runner
 # ---------------------------------------------------------------------------
+
 
 class TestRegressionRunner:
     def test_run_regression_stores_results(self, store):
