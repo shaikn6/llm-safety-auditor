@@ -25,6 +25,7 @@ from ci.github_actions_generator import (
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def sample_report():
     llm = MockLLM(global_seed=42)
@@ -42,6 +43,7 @@ def sarif_report(sample_report):
 # WorkflowConfig
 # ---------------------------------------------------------------------------
 
+
 class TestWorkflowConfig:
     def test_defaults(self):
         cfg = WorkflowConfig()
@@ -52,7 +54,9 @@ class TestWorkflowConfig:
         assert cfg.enable_sarif_upload is True
 
     def test_custom_config(self):
-        cfg = WorkflowConfig(fail_on_critical_count=2, warn_on_high_count=10, python_version="3.12")
+        cfg = WorkflowConfig(
+            fail_on_critical_count=2, warn_on_high_count=10, python_version="3.12"
+        )
         assert cfg.fail_on_critical_count == 2
         assert cfg.warn_on_high_count == 10
         assert cfg.python_version == "3.12"
@@ -61,6 +65,7 @@ class TestWorkflowConfig:
 # ---------------------------------------------------------------------------
 # GitHub Actions YAML generation
 # ---------------------------------------------------------------------------
+
 
 class TestGithubActionsGenerator:
     def test_generates_yaml_string(self):
@@ -77,11 +82,15 @@ class TestGithubActionsGenerator:
         assert "upload-sarif" in yaml_str
 
     def test_yaml_contains_python_version(self):
-        yaml_str = generate_github_actions_workflow(WorkflowConfig(python_version="3.12"))
+        yaml_str = generate_github_actions_workflow(
+            WorkflowConfig(python_version="3.12")
+        )
         assert "3.12" in yaml_str
 
     def test_yaml_contains_fail_threshold(self):
-        yaml_str = generate_github_actions_workflow(WorkflowConfig(fail_on_critical_count=3))
+        yaml_str = generate_github_actions_workflow(
+            WorkflowConfig(fail_on_critical_count=3)
+        )
         assert "3" in yaml_str
 
     def test_write_workflow_file(self):
@@ -100,6 +109,7 @@ class TestGithubActionsGenerator:
 # ---------------------------------------------------------------------------
 # SARIF generation
 # ---------------------------------------------------------------------------
+
 
 class TestSarifGeneration:
     def test_sarif_report_has_rules(self, sarif_report):
@@ -149,6 +159,7 @@ class TestSarifGeneration:
 # ---------------------------------------------------------------------------
 # Badge generator
 # ---------------------------------------------------------------------------
+
 
 class TestBadgeGenerator:
     def test_green_badge_for_high_score(self):

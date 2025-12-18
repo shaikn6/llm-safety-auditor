@@ -19,6 +19,7 @@ from scoring.owasp_scorer import (
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def full_report():
     llm = MockLLM(global_seed=42)
@@ -41,6 +42,7 @@ def matrix(scorer, full_report):
 # Severity weights
 # ---------------------------------------------------------------------------
 
+
 class TestSeverityWeights:
     def test_critical_has_highest_weight(self):
         assert SEVERITY_WEIGHTS["CRITICAL"] > SEVERITY_WEIGHTS["HIGH"]
@@ -61,6 +63,7 @@ class TestSeverityWeights:
 # ---------------------------------------------------------------------------
 # OWASP category definitions
 # ---------------------------------------------------------------------------
+
 
 class TestOWASPCategoryDefinitions:
     def test_ten_categories_defined(self):
@@ -97,6 +100,7 @@ class TestOWASPCategoryDefinitions:
 # ---------------------------------------------------------------------------
 # OWASPScorer.score()
 # ---------------------------------------------------------------------------
+
 
 class TestOWASPScorerScore:
     def test_returns_matrix(self, matrix):
