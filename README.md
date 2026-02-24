@@ -268,3 +268,23 @@ curl -X POST http://localhost:8000/detect \
 🐙 [github.com/shaikn6](https://github.com/shaikn6)
 
 <!-- CI verified -->
+
+## API Reference
+
+[![OpenAPI](https://img.shields.io/badge/OpenAPI-3.0-6BA539?logo=openapi-initiative&logoColor=white)](http://localhost:8000/docs)
+[![Swagger UI](https://img.shields.io/badge/Swagger_UI-docs-85EA2D?logo=swagger&logoColor=black)](http://localhost:8000/docs)
+[![ReDoc](https://img.shields.io/badge/ReDoc-redoc-8A2BE2)](http://localhost:8000/redoc)
+
+Interactive docs: `http://localhost:8000/docs` (Swagger UI, set `ENABLE_DOCS=1`) · `http://localhost:8000/redoc` (ReDoc)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/health` | Health check |
+| `POST` | `/audit/run` | Run a new adversarial audit session against the mock LLM |
+| `GET` | `/audit/{session_id}` | Get session summary by ID |
+| `GET` | `/audit/{session_id}/results` | Get all attack results for a session |
+| `GET` | `/audit/sessions/list` | List all audit sessions |
+| `GET` | `/attacks` | List all available attack prompts (filterable by category/severity) |
+| `GET` | `/attacks/{attack_id}` | Get a single attack prompt by ID |
+| `GET` | `/attacks/stats/categories` | Return attack count per category |
+| `POST` | `/detect` | Run the safety detector on arbitrary text |
