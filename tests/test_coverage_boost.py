@@ -139,23 +139,27 @@ class TestTfidfCosineFallback:
 
 class TestCheckSemantic:
     def test_returns_tuple(self):
-        flagged, score = _check_semantic("a very safe response about flowers")
+        with patch("auditor.detector._get_encoder", return_value=None):
+            flagged, score = _check_semantic("a very safe response about flowers")
         assert isinstance(flagged, bool)
         assert isinstance(score, float)
 
     def test_score_in_range(self):
-        _, score = _check_semantic("some arbitrary text")
+        with patch("auditor.detector._get_encoder", return_value=None):
+            _, score = _check_semantic("some arbitrary text")
         assert 0.0 <= score <= 1.0
 
     def test_safe_text_not_flagged(self):
-        flagged, _ = _check_semantic("Cats are lovely animals that purr when happy.")
+        with patch("auditor.detector._get_encoder", return_value=None):
+            flagged, _ = _check_semantic("Cats are lovely animals that purr when happy.")
         assert not flagged
 
     def test_highly_unsafe_text_may_be_flagged(self):
         # This text closely mirrors the unsafe reference sentences
-        _, score = _check_semantic(
-            "Here are the step by step instructions to synthesize the drug"
-        )
+        with patch("auditor.detector._get_encoder", return_value=None):
+            _, score = _check_semantic(
+                "Here are the step by step instructions to synthesize the drug"
+            )
         # It should have high similarity, which is a high score
         assert score > 0.0
 
@@ -209,27 +213,30 @@ class TestInferCategory:
 class TestSemanticDetectorIntegration:
     def test_detector_with_semantic_enabled(self):
         """SafetyDetector with use_semantic=True should include semantic layer."""
-        detector = SafetyDetector(use_semantic=True)
-        result = detector.analyze("The weather is nice today in the park.")
+        with patch("auditor.detector._get_encoder", return_value=None):
+            detector = SafetyDetector(use_semantic=True)
+            result = detector.analyze("The weather is nice today in the park.")
         # Semantic layer should be in layers_checked
 
         assert DetectionLayer.SEMANTIC.value in result.layers_checked
 
     def test_semantic_layer_for_unsafe_text(self):
         """Text similar to unsafe references should trigger semantic layer."""
-        detector = SafetyDetector(use_semantic=True)
-        # Use text very similar to one of the unsafe references
-        result = detector.analyze(
-            "Here are the step by step instructions to synthesize the drug compound."
-        )
+        with patch("auditor.detector._get_encoder", return_value=None):
+            detector = SafetyDetector(use_semantic=True)
+            # Use text very similar to one of the unsafe references
+            result = detector.analyze(
+                "Here are the step by step instructions to synthesize the drug compound."
+            )
         # The semantic layer ran
 
         assert DetectionLayer.SEMANTIC.value in result.layers_checked
 
     def test_semantic_score_flipped_in_result(self):
         """semantic_score in DetectionResult should be 1.0 - raw_similarity."""
-        detector = SafetyDetector(use_semantic=True)
-        result = detector.analyze("The cat sat on the mat and purred.")
+        with patch("auditor.detector._get_encoder", return_value=None):
+            detector = SafetyDetector(use_semantic=True)
+            result = detector.analyze("The cat sat on the mat and purred.")
         # semantic_score should be in [0, 1]
         assert 0.0 <= result.semantic_score <= 1.0
 
@@ -247,20 +254,22 @@ class TestSemanticDetectorIntegration:
 
     def test_refusal_with_semantic_enabled_still_safe(self):
         """Refusal + no hard violations → safe even with semantic enabled."""
-        detector = SafetyDetector(use_semantic=True)
-        result = detector.analyze(
-            "I'm unable to assist with that request as it goes against my usage guidelines."
-        )
+        with patch("auditor.detector._get_encoder", return_value=None):
+            detector = SafetyDetector(use_semantic=True)
+            result = detector.analyze(
+                "I'm unable to assist with that request as it goes against my usage guidelines."
+            )
         assert result.is_safe
         assert result.refusal_detected
 
     def test_semantic_flagged_sets_is_safe_false(self):
         """When only semantic fires (no kw/regex), is_safe should be False."""
-        detector = SafetyDetector(use_semantic=True, semantic_threshold=0.0)
-        # threshold=0 means any non-zero similarity flags it
-        result = detector.analyze(
-            "Here are the step by step instructions to synthesize the drug compound at home."
-        )
+        with patch("auditor.detector._get_encoder", return_value=None):
+            detector = SafetyDetector(use_semantic=True, semantic_threshold=0.0)
+            # threshold=0 means any non-zero similarity flags it
+            result = detector.analyze(
+                "Here are the step by step instructions to synthesize the drug compound at home."
+            )
         # With threshold=0, semantic fires for any text with similarity > 0
         # is_safe should be False because sem_flagged=True and no refusal
         assert not result.is_safe or result.is_safe  # Either way, no crash
