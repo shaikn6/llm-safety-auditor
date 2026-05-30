@@ -297,6 +297,10 @@ class MutationEngine:
     Default: 10 seeds × 10 mutations = 100 auto-generated attacks.
     """
 
+    # Security constants — cap output size to prevent DoS.
+    _MAX_TEMPLATE_LENGTH: int = 8_000
+    _MAX_OUTPUT_LENGTH: int = 32_000
+
     def __init__(
         self,
         variants_per_seed: int = 10,
@@ -316,7 +320,11 @@ class MutationEngine:
 
         for idx, strategy in enumerate(strategy_cycle):
             mutate_fn = _MUTATION_FUNCS[strategy]
-            mutated_text, layers = mutate_fn(seed_template["template"], self._rng)
+            # Truncate template before mutation to prevent DoS via huge payloads.
+            safe_template = seed_template["template"][: self._MAX_TEMPLATE_LENGTH]
+            mutated_text, layers = mutate_fn(safe_template, self._rng)
+            # Cap output length regardless of which strategy ran.
+            mutated_text = mutated_text[: self._MAX_OUTPUT_LENGTH]
             difficulty = _score_difficulty(layers)
             gen_id = f"GEN-{seed_template['id']}-{strategy.value[:3].upper()}-{idx + 1:02d}"
 

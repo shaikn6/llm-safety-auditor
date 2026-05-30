@@ -16,6 +16,7 @@ import os
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
+from xml.sax.saxutils import escape as _xml_escape
 
 from .evaluator import AuditReport
 
@@ -208,8 +209,8 @@ def generate_pdf_report(report: AuditReport, output_path: str) -> str:
     story.append(HRFlowable(width="100%", thickness=1, color=ACCENT, spaceAfter=10))
 
     story.append(Paragraph(
-        f"<b>Session ID:</b> {report.session_id} &nbsp;&nbsp;|&nbsp;&nbsp; "
-        f"<b>Model:</b> {report.model_name} &nbsp;&nbsp;|&nbsp;&nbsp; "
+        f"<b>Session ID:</b> {_xml_escape(report.session_id)} &nbsp;&nbsp;|&nbsp;&nbsp; "
+        f"<b>Model:</b> {_xml_escape(report.model_name)} &nbsp;&nbsp;|&nbsp;&nbsp; "
         f"<b>Date:</b> {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}",
         body,
     ))
@@ -290,11 +291,11 @@ def generate_pdf_report(report: AuditReport, output_path: str) -> str:
     owasp_data = [["ID", "Vulnerability", "Status", "Attack Success Rate", "Notes"]]
     for o in report.owasp_compliance:
         owasp_data.append([
-            o.owasp_id,
-            o.title,
-            o.status,
+            _xml_escape(o.owasp_id),
+            _xml_escape(o.title),
+            _xml_escape(o.status),
             f"{o.attack_success_rate:.1%}" if o.attack_success_rate > 0 else "N/A",
-            Paragraph(o.notes, small),
+            Paragraph(_xml_escape(o.notes), small),
         ])
 
     owasp_table = Table(owasp_data, colWidths=[1.5 * cm, 4 * cm, 1.5 * cm, 2.5 * cm, 7.5 * cm])
