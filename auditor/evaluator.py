@@ -20,8 +20,6 @@ from .attack_library import (
     AttackCategory,
     AttackPrompt,
     Severity,
-    get_attacks_by_category,
-    get_attacks_by_severity,
 )
 from .detector import DetectionResult, SafetyDetector
 from .mock_llm import LLMResponse, MockLLM

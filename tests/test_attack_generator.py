@@ -3,12 +3,10 @@
 from __future__ import annotations
 
 import base64
-import pytest
 
 from attacks.attack_generator import (
     AttackTemplateLibrary,
     Difficulty,
-    GeneratedAttack,
     MutationEngine,
     MutationStrategy,
     SEED_TEMPLATES,
@@ -21,7 +19,7 @@ from attacks.attack_generator import (
     _score_difficulty,
     detect_success,
 )
-from auditor.attack_library import AttackCategory, Severity
+from auditor.attack_library import AttackCategory
 
 
 # ---------------------------------------------------------------------------
