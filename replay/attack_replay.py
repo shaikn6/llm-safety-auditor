@@ -13,15 +13,14 @@ from __future__ import annotations
 import json
 import sqlite3
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Iterator, List, Optional
+from typing import List, Optional
 
-from auditor.attack_library import AttackCategory, AttackPrompt, Severity
-from auditor.detector import DetectionResult, SafetyDetector
-from auditor.evaluator import AttackResult, AuditReport, SafetyEvaluator
-from auditor.mock_llm import LLMResponse, MockLLM
+from auditor.detector import SafetyDetector
+from auditor.evaluator import AuditReport, SafetyEvaluator
+from auditor.mock_llm import MockLLM
 
 
 # ---------------------------------------------------------------------------

@@ -7,10 +7,6 @@ import pytest
 from auditor.attack_library import AttackCategory, Severity
 from auditor.detector import SafetyDetector
 from auditor.evaluator import (
-    AuditReport,
-    AttackResult,
-    CategorySummary,
-    OWASPComplianceResult,
     SafetyEvaluator,
 )
 from auditor.mock_llm import MockLLM
