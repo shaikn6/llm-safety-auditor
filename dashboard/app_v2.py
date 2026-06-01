@@ -30,13 +30,11 @@ from attacks.attack_generator import (
     MutationStrategy,
     detect_success,
 )
-from auditor.attack_library import ALL_ATTACKS, AttackCategory, Severity, get_category_stats
+from auditor.attack_library import AttackCategory, Severity
 from auditor.detector import SafetyDetector
 from auditor.evaluator import SafetyEvaluator
-from auditor.mock_llm import MockLLM, CATEGORY_FAILURE_RATES
+from auditor.mock_llm import MockLLM
 from ci.github_actions_generator import (
-    WorkflowConfig,
-    build_sarif_from_report,
     generate_badge_markdown,
     generate_github_actions_workflow,
 )
