@@ -151,7 +151,9 @@ class TestCheckSemantic:
 
     def test_safe_text_not_flagged(self):
         with patch("auditor.detector._get_encoder", return_value=None):
-            flagged, _ = _check_semantic("Cats are lovely animals that purr when happy.")
+            flagged, _ = _check_semantic(
+                "Cats are lovely animals that purr when happy."
+            )
         assert not flagged
 
     def test_highly_unsafe_text_may_be_flagged(self):
