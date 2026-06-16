@@ -95,52 +95,58 @@ _SYNONYM_MAP: dict[str, str] = {
 # Unicode homoglyph mapping (Latin → visually identical codepoints)
 # ---------------------------------------------------------------------------
 _HOMOGLYPH_MAP: dict[str, str] = {
-    "a": "а",   # Cyrillic а
-    "e": "е",   # Cyrillic е
-    "o": "о",   # Cyrillic о
-    "p": "р",   # Cyrillic р
-    "c": "с",   # Cyrillic с
-    "x": "х",   # Cyrillic х
-    "A": "А",   # Cyrillic А
-    "B": "В",   # Cyrillic В
-    "E": "Е",   # Cyrillic Е
-    "K": "К",   # Cyrillic К
-    "M": "М",   # Cyrillic М
-    "O": "О",   # Cyrillic О
-    "P": "Р",   # Cyrillic Р
-    "T": "Т",   # Cyrillic Т  (note: U+0422 looks like T)
-    "H": "Н",   # Cyrillic Н
-    "i": "і",   # Cyrillic і (Ukrainian)
-    "I": "І",   # Cyrillic І (Ukrainian)
-    "s": "ѕ",   # Cyrillic ѕ
-    "y": "у",   # Cyrillic у
-    "n": "ո",   # Armenian ո (looks like n)
+    "a": "а",  # Cyrillic а
+    "e": "е",  # Cyrillic е
+    "o": "о",  # Cyrillic о
+    "p": "р",  # Cyrillic р
+    "c": "с",  # Cyrillic с
+    "x": "х",  # Cyrillic х
+    "A": "А",  # Cyrillic А
+    "B": "В",  # Cyrillic В
+    "E": "Е",  # Cyrillic Е
+    "K": "К",  # Cyrillic К
+    "M": "М",  # Cyrillic М
+    "O": "О",  # Cyrillic О
+    "P": "Р",  # Cyrillic Р
+    "T": "Т",  # Cyrillic Т  (note: U+0422 looks like T)
+    "H": "Н",  # Cyrillic Н
+    "i": "і",  # Cyrillic і (Ukrainian)
+    "I": "І",  # Cyrillic І (Ukrainian)
+    "s": "ѕ",  # Cyrillic ѕ
+    "y": "у",  # Cyrillic у
+    "n": "ո",  # Armenian ո (looks like n)
 }
 
 # ---------------------------------------------------------------------------
 # Unicode whitespace chars for noise injection
 # ---------------------------------------------------------------------------
 _UNICODE_WHITESPACE: list[str] = [
-    "​",   # Zero-width space
-    "‌",   # Zero-width non-joiner
-    "‍",   # Zero-width joiner
-    "⁠",   # Word joiner
-    "­",   # Soft hyphen
-    "﻿",   # Zero-width no-break space (BOM)
-    "᠎",   # Mongolian vowel separator
-    " ",   # Narrow no-break space
+    "​",  # Zero-width space
+    "‌",  # Zero-width non-joiner
+    "‍",  # Zero-width joiner
+    "⁠",  # Word joiner
+    "­",  # Soft hyphen
+    "﻿",  # Zero-width no-break space (BOM)
+    "᠎",  # Mongolian vowel separator
+    " ",  # Narrow no-break space
 ]
 
 # ---------------------------------------------------------------------------
 # Leetspeak substitutions
 # ---------------------------------------------------------------------------
 _LEET_MAP: dict[str, str] = {
-    "a": "4", "A": "4",
-    "e": "3", "E": "3",
-    "i": "1", "I": "1",
-    "o": "0", "O": "0",
-    "s": "5", "S": "5",
-    "t": "7", "T": "7",
+    "a": "4",
+    "A": "4",
+    "e": "3",
+    "E": "3",
+    "i": "1",
+    "I": "1",
+    "o": "0",
+    "O": "0",
+    "s": "5",
+    "S": "5",
+    "t": "7",
+    "T": "7",
 }
 
 
@@ -220,8 +226,7 @@ class AttackMutationEngine:
             result = self._unicode_homoglyph(attack)
         else:
             raise ValueError(
-                f"Unknown strategy '{strategy}'. "
-                f"Valid options: {self.ALL_STRATEGIES}"
+                f"Unknown strategy '{strategy}'. Valid options: {self.ALL_STRATEGIES}"
             )
         # Hard cap on output length to prevent DoS via disproportionate expansion
         # (base64 encoding and noise injection can inflate payload size).
@@ -271,7 +276,7 @@ class AttackMutationEngine:
         for word in words:
             # Strip punctuation suffix for matching
             stripped = word.rstrip(".,!?;:'\"").lower()
-            suffix = word[len(stripped):]
+            suffix = word[len(stripped) :]
             if stripped in _SYNONYM_MAP:
                 synonym = _SYNONYM_MAP[stripped]
                 # Preserve capitalisation of the original word
