@@ -262,11 +262,6 @@ def generate_report(
         "Rec", fontName="Helvetica", fontSize=9,
         textColor=LIGHT_GRAY, spaceAfter=8, leading=13, leftIndent=10,
     )
-    code_style = ParagraphStyle(
-        "Code", fontName="Courier", fontSize=8,
-        textColor=LIGHT_GRAY, spaceAfter=4, leading=11,
-    )
-
     story: list[Any] = []
 
     # ==================================================================
