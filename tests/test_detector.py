@@ -17,6 +17,7 @@ from auditor.detector import (
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def detector():
     """Return a detector with semantic disabled for fast unit tests."""
@@ -26,6 +27,7 @@ def detector():
 # ---------------------------------------------------------------------------
 # Keyword detection tests
 # ---------------------------------------------------------------------------
+
 
 class TestKeywordDetector:
     def test_detects_jailbreak_success_phrase(self):
@@ -75,6 +77,7 @@ class TestKeywordDetector:
 # Regex detection tests
 # ---------------------------------------------------------------------------
 
+
 class TestRegexDetector:
     def test_detects_ssn_pattern(self):
         flagged, rules = _check_regex("The patient SSN is 123-45-6789.")
@@ -121,6 +124,7 @@ class TestRegexDetector:
 # Refusal detection tests
 # ---------------------------------------------------------------------------
 
+
 class TestRefusalDetector:
     def test_detects_unable_phrase(self):
         assert _check_refusal("I'm unable to assist with that request.")
@@ -157,6 +161,7 @@ class TestRefusalDetector:
 # ---------------------------------------------------------------------------
 # Full SafetyDetector integration tests
 # ---------------------------------------------------------------------------
+
 
 class TestSafetyDetectorIntegration:
     def test_safe_refusal_response(self, detector):

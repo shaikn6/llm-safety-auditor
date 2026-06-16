@@ -16,6 +16,7 @@ from auditor.mock_llm import MockLLM
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def mock_llm():
     return MockLLM(global_seed=42)
@@ -28,7 +29,9 @@ def detector():
 
 @pytest.fixture
 def evaluator(mock_llm, detector):
-    return SafetyEvaluator(llm=mock_llm, detector=detector, session_id="test-session-001")
+    return SafetyEvaluator(
+        llm=mock_llm, detector=detector, session_id="test-session-001"
+    )
 
 
 @pytest.fixture
@@ -41,12 +44,16 @@ def full_report(evaluator):
 # AuditReport structure tests
 # ---------------------------------------------------------------------------
 
+
 class TestAuditReportStructure:
     def test_report_has_correct_total(self, full_report):
         assert full_report.total_attacks == 50
 
     def test_safe_plus_unsafe_equals_total(self, full_report):
-        assert full_report.safe_responses + full_report.unsafe_responses == full_report.total_attacks
+        assert (
+            full_report.safe_responses + full_report.unsafe_responses
+            == full_report.total_attacks
+        )
 
     def test_overall_score_in_range(self, full_report):
         assert 0.0 <= full_report.overall_safety_score <= 100.0
@@ -135,7 +142,14 @@ class TestSafetyDimensions:
 
     def test_expected_dimension_names(self, full_report):
         dims = full_report.safety_dimensions
-        for expected in ["Harmlessness", "Honesty", "Privacy", "Robustness", "Bias", "Hallucination"]:
+        for expected in [
+            "Harmlessness",
+            "Honesty",
+            "Privacy",
+            "Robustness",
+            "Bias",
+            "Hallucination",
+        ]:
             assert expected in dims
 
     def test_dimension_scores_in_range(self, full_report):
@@ -147,14 +161,14 @@ class TestSafetyDimensions:
 # Filtered run tests
 # ---------------------------------------------------------------------------
 
+
 class TestFilteredRuns:
     def test_run_single_category(self, mock_llm, detector):
         ev = SafetyEvaluator(llm=mock_llm, detector=detector, session_id="cat-test")
         report = ev.run(categories=[AttackCategory.JAILBREAK])
         assert report.total_attacks == 10
         assert all(
-            r.attack.category == AttackCategory.JAILBREAK
-            for r in report.attack_results
+            r.attack.category == AttackCategory.JAILBREAK for r in report.attack_results
         )
 
     def test_run_with_limit(self, mock_llm, detector):
@@ -192,6 +206,7 @@ class TestFilteredRuns:
 # Determinism tests
 # ---------------------------------------------------------------------------
 
+
 class TestDeterminism:
     def test_same_seed_same_results(self):
         def run_with_seed(seed: int) -> float:
@@ -223,6 +238,7 @@ class TestDeterminism:
 # Recommendations tests
 # ---------------------------------------------------------------------------
 
+
 class TestRecommendations:
     def test_recommendations_are_strings(self, full_report):
         for rec in full_report.recommendations:
@@ -247,4 +263,6 @@ class TestRecommendations:
         report = ev.run()
         recs = " ".join(report.recommendations)
         # At minimum the general red-teaming recommendation is always present
-        assert "red-teaming" in recs.lower() or "CI/CD" in recs or "audit" in recs.lower()
+        assert (
+            "red-teaming" in recs.lower() or "CI/CD" in recs or "audit" in recs.lower()
+        )
