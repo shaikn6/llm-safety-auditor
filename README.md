@@ -266,3 +266,5 @@ curl -X POST http://localhost:8000/detect \
 **Nagizaaz Shaik** — MLOps Engineer  
 🔗 [linkedin.com/in/nagizaazshaik](https://linkedin.com/in/nagizaazshaik)  
 🐙 [github.com/shaikn6](https://github.com/shaikn6)
+
+<!-- CI verified -->
