@@ -17,7 +17,7 @@ pandas>=2.2.2
 
 # Visualization
 matplotlib>=3.9.0
-numpy>=1.26,<2.2
+numpy>=2.4.6,<2.5
 
 # Testing
 pytest>=9.0.0
