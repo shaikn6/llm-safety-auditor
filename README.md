@@ -4,18 +4,8 @@
 # LLM Safety Auditor — Automated Red-Teaming for LLM Deployments
 
 [![CI](https://github.com/shaikn6/llm-safety-auditor/actions/workflows/ci.yml/badge.svg)](https://github.com/shaikn6/llm-safety-auditor/actions)
-[![Live Demo](https://img.shields.io/badge/🔒%20Live%20Demo-HuggingFace-FF9E0F?logo=huggingface&logoColor=white)](https://huggingface.co/spaces/9mark9/llm-safety-auditor)
-
-![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-HuggingFace-FF9E0F?logo=huggingface&logoColor=white)](https://huggingface.co/spaces/9mark9/llm-safety-auditor)
 ![License](https://img.shields.io/badge/License-MIT-22c55e)
-![Tests](https://img.shields.io/badge/Tests-passing-22c55e)
-![Stack](https://img.shields.io/badge/Stack-sentence-transformers-6366f1)
-
-
-![Safety Score](https://img.shields.io/badge/Safety%20Score-63.2%2F100-yellow)
-![OWASP](https://img.shields.io/badge/OWASP%20LLM%20Top%2010-Mapped-blue)
-![Python](https://img.shields.io/badge/Python-3.11-blue)
-![Version](https://img.shields.io/badge/version-2.0.0-brightgreen)
 
 ## What's New in V2
 
