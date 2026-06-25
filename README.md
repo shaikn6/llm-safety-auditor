@@ -54,19 +54,24 @@ Build an automated red-teaming framework that systematically probes LLM deployme
 
 ## Result
 
-- Detects **23–67% attack success rates** pre-hardening across attack categories
-- **Hallucination** is the highest-risk vector (67% bypass rate) — critical for RAG pipelines
-- **Bias elicitation** second-highest (45%) — requires fairness layer in production
-- Reduces manual security review time by **~80%** vs. human red-teamers
-- OWASP LLM Top 10 compliance grid exported as audit evidence for security reviews
-- Full audit session replay with seeded RNG for reproducible security testing
+The framework is a fully reproducible harness, not a benchmark of any specific model. It ships with:
+
+- **50 adversarial attack templates** across 5 categories, all mapped to the OWASP LLM Top 10 (`auditor/attack_library.py`)
+- **4-layer detection pipeline** with short-circuit evaluation and a TF-IDF fallback when `sentence-transformers` is unavailable (`auditor/detector.py`)
+- **391 test functions** across 9 suites; CI enforces a **≥80% coverage gate** (`--cov-fail-under=80`)
+- OWASP LLM Top 10 compliance grid (PASS / WARN / FAIL) exported as audit evidence (`auditor/evaluator.py`, `scoring/owasp_scorer.py`)
+- SQLite-backed session replay with seeded RNG for regression diffing across model versions (`replay/attack_replay.py`)
+
+> **About the numbers below.** Out of the box the harness runs against a **seeded, deterministic mock LLM** (`auditor/mock_llm.py`) so it works with no API key. The per-category percentages shown in the table and screenshots are the mock's **calibration profile** (`CATEGORY_FAILURE_RATES`) — i.e. illustrative, reproducible demonstration data, **not** measured results against a production model. Point the evaluator at a real provider to produce real findings; the scoring, detection, and reporting logic is identical.
 
 ---
 
 ## Attack Categories
 
-| Category | Templates | Success Rate | OWASP Ref | Severity |
-|----------|-----------|-------------|-----------|---------|
+50 templates, 10 per category, each mapped to OWASP LLM Top 10. The "Mock failure rate" column is the seeded mock LLM's calibration profile (`auditor/mock_llm.py`) — demonstration data, not a benchmark of any real model.
+
+| Category | Templates | Mock failure rate | OWASP Ref | Severity |
+|----------|-----------|-------------------|-----------|---------|
 | Jailbreak | 10 | 23% | LLM01 | HIGH–CRITICAL |
 | Prompt Injection | 10 | 18% | LLM01 | MEDIUM–CRITICAL |
 | Data Exfiltration | 10 | 31% | LLM06 | HIGH–CRITICAL |
@@ -92,6 +97,35 @@ Build an automated red-teaming framework that systematically probes LLM deployme
 ---
 
 ## Architecture
+
+```mermaid
+flowchart TD
+    Lib["AttackLibrary<br/>50 templates · 5 categories<br/>auditor/attack_library.py"]
+    Mut["AttackMutationEngine<br/>6 strategies → 200+ variants<br/>src/mutation_engine.py"]
+    Lib --> Eval
+    Mut -.-> Eval
+
+    Eval["SafetyEvaluator<br/>orchestrates the loop<br/>auditor/evaluator.py"]
+    Eval -->|"each attack"| Mock["MockLLM (seeded)<br/>or real provider<br/>auditor/mock_llm.py"]
+    Mock -->|"response"| Detect
+
+    Detect["SafetyDetector — 4 layers<br/>auditor/detector.py"]
+    Detect --> L1["1 · keyword blacklist"]
+    Detect --> L2["2 · regex PII / credentials (9 patterns)"]
+    Detect --> L3["3 · refusal detection"]
+    Detect --> L4["4 · semantic similarity<br/>MiniLM · TF-IDF fallback"]
+
+    Detect -->|"DetectionResult"| Score["AuditReport<br/>score 0–100 · 6-dim radar<br/>+ OWASP scorer (weighted, CWE)<br/>scoring/owasp_scorer.py"]
+
+    Score --> Report["PDF / JSON reports<br/>report_generator.py"]
+    Score --> API["FastAPI + slowapi<br/>SQLite persistence<br/>api/main.py"]
+    Score --> Dash["Streamlit + Plotly<br/>dashboard/app.py"]
+    Score --> Replay["Attack replay (SQLite)<br/>regression diff + timeline<br/>replay/attack_replay.py"]
+    Score --> CI["CI generator → SARIF<br/>ci/github_actions_generator.py"]
+    API --> Client["TypeScript client (axios)<br/>client/src/"]
+```
+
+Repository layout:
 
 ```
 llm-safety-auditor/
@@ -241,13 +275,15 @@ curl -X POST http://localhost:8000/detect \
 | Layer | Technology |
 |-------|-----------|
 | Language | Python 3.11 |
-| API | FastAPI 0.111 |
+| API | FastAPI + slowapi (rate limiting) + Uvicorn |
 | Database | SQLite + SQLAlchemy 2.0 |
-| Detection | sentence-transformers, regex, keyword |
-| PDF Reports | ReportLab 4.2 |
-| Dashboard | Streamlit 1.35 |
-| Visualization | Plotly, Matplotlib |
-| Testing | pytest + pytest-cov |
+| Detection | sentence-transformers (MiniLM) + regex + keyword, TF-IDF cosine fallback |
+| Mutation / scoring | custom mutation engine (6 strategies) + OWASP Top 10 weighted scorer (CWE mapping) |
+| PDF Reports | ReportLab |
+| Dashboard | Streamlit + Plotly + Matplotlib |
+| Client | TypeScript (axios) |
+| CI integration | generated GitHub Actions workflow + SARIF |
+| Testing | pytest + pytest-cov (391 tests, ≥80% gate); ruff · mypy · bandit · pip-audit |
 | Containerization | Docker + Docker Compose |
 
 ---
