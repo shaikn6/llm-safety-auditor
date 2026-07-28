@@ -5,11 +5,11 @@ from __future__ import annotations
 import base64
 
 from attacks.attack_generator import (
+    SEED_TEMPLATES,
     AttackTemplateLibrary,
     Difficulty,
     MutationEngine,
     MutationStrategy,
-    SEED_TEMPLATES,
     _apply_homoglyphs,
     _mutate_base64_encoding,
     _mutate_nested_instructions,
@@ -20,7 +20,6 @@ from attacks.attack_generator import (
     detect_success,
 )
 from auditor.attack_library import AttackCategory
-
 
 # ---------------------------------------------------------------------------
 # Difficulty scoring

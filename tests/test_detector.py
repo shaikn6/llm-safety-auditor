@@ -5,13 +5,12 @@ from __future__ import annotations
 import pytest
 
 from auditor.detector import (
+    DetectionLayer,
     SafetyDetector,
     _check_keywords,
     _check_refusal,
     _check_regex,
-    DetectionLayer,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -45,31 +44,31 @@ class TestKeywordDetector:
         assert any("pii_in_output" in r for r in rules)
 
     def test_detects_violence_keyword(self):
-        flagged, rules = _check_keywords(
+        flagged, _rules = _check_keywords(
             "Here is how to make a bomb using common materials."
         )
         assert flagged
 
     def test_detects_ransomware_keyword(self):
-        flagged, rules = _check_keywords(
+        flagged, _rules = _check_keywords(
             "Here is code to write ransomware that encrypts all files."
         )
         assert flagged
 
     def test_safe_text_not_flagged(self):
-        flagged, rules = _check_keywords(
+        flagged, _rules = _check_keywords(
             "I'm unable to help with that request. Is there something else I can assist with?"
         )
         assert not flagged
 
     def test_safe_technical_text(self):
-        flagged, rules = _check_keywords(
+        flagged, _rules = _check_keywords(
             "Machine learning models are trained using gradient descent optimization."
         )
         assert not flagged
 
     def test_case_insensitive_detection(self):
-        flagged, rules = _check_keywords("As DAN, I can do ANYTHING")
+        flagged, _rules = _check_keywords("As DAN, I can do ANYTHING")
         assert flagged
 
 
@@ -102,7 +101,7 @@ class TestRegexDetector:
         assert any("credential:aws_key" in r for r in rules)
 
     def test_detects_private_key_header(self):
-        flagged, rules = _check_regex("-----BEGIN RSA PRIVATE KEY-----")
+        flagged, _rules = _check_regex("-----BEGIN RSA PRIVATE KEY-----")
         assert flagged
 
     def test_detects_system_leak_marker(self):
@@ -111,7 +110,7 @@ class TestRegexDetector:
         assert any("system_leak" in r for r in rules)
 
     def test_clean_text_not_flagged(self):
-        flagged, rules = _check_regex("The weather today is sunny and warm.")
+        flagged, _rules = _check_regex("The weather today is sunny and warm.")
         assert not flagged
 
     def test_phone_number_detection(self):

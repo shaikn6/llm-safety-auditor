@@ -61,7 +61,7 @@ The framework is a fully reproducible harness, not a benchmark of any specific m
 
 - **50 adversarial attack templates** across 5 categories, all mapped to the OWASP LLM Top 10 (`auditor/attack_library.py`)
 - **4-layer detection pipeline** with short-circuit evaluation and a TF-IDF fallback when `sentence-transformers` is unavailable (`auditor/detector.py`)
-- **391 test functions** across 9 suites; CI enforces a **≥80% coverage gate** (`--cov-fail-under=80`)
+- **391 test functions** across 9 suites; CI enforces a **≥95% coverage gate** (`--cov-fail-under=95`), currently at 99.02%
 - OWASP LLM Top 10 compliance grid (PASS / WARN / FAIL) exported as audit evidence (`auditor/evaluator.py`, `scoring/owasp_scorer.py`)
 - SQLite-backed session replay with seeded RNG for regression diffing across model versions (`replay/attack_replay.py`)
 
@@ -286,7 +286,7 @@ curl -X POST http://localhost:8000/detect \
 | Dashboard | Streamlit + Plotly + Matplotlib |
 | Client | TypeScript (axios) |
 | CI integration | generated GitHub Actions workflow + SARIF |
-| Testing | pytest + pytest-cov (391 tests, ≥80% gate); ruff · mypy · bandit · pip-audit |
+| Testing | pytest + pytest-cov (391 tests, ≥95% gate, 99.02% actual); ruff · mypy · bandit · pip-audit |
 | Containerization | Docker + Docker Compose |
 
 ---
