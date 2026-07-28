@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import base64
 import random
+from typing import ClassVar
 
 # ---------------------------------------------------------------------------
 # Synonym dictionary for paraphrase strategy
@@ -121,7 +122,7 @@ _HOMOGLYPH_MAP: dict[str, str] = {
 # Unicode whitespace chars for noise injection
 # ---------------------------------------------------------------------------
 _UNICODE_WHITESPACE: list[str] = [
-    "​",  # Zero-width space
+    "\u200b",  # Zero-width space
     "‌",  # Zero-width non-joiner
     "‍",  # Zero-width joiner
     "⁠",  # Word joiner
@@ -164,7 +165,7 @@ class AttackMutationEngine:
     max_output_length : hard cap on any single mutated string (default 32 000 chars).
     """
 
-    ALL_STRATEGIES: list[str] = [
+    ALL_STRATEGIES: ClassVar[list[str]] = [
         "paraphrase",
         "encode_base64",
         "leetspeak",
@@ -288,7 +289,7 @@ class AttackMutationEngine:
         paraphrased = " ".join(result)
         # Ensure output differs from input (fallback: append a zero-width space)
         if paraphrased == attack:
-            paraphrased = attack + "​"
+            paraphrased = attack + "\u200b"
         return paraphrased
 
     def _encode_base64(self, attack: str) -> str:
@@ -304,7 +305,7 @@ class AttackMutationEngine:
         result = "".join(_LEET_MAP.get(ch, ch) for ch in attack)
         # Guarantee difference from input
         if result == attack:
-            result = attack + "​"
+            result = attack + "\u200b"
         return result
 
     def _insert_noise(self, attack: str) -> str:

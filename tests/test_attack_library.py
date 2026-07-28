@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-
 from auditor.attack_library import (
     ALL_ATTACKS,
+    OWASP_MAPPING,
     AttackCategory,
     Severity,
     get_attack_by_id,
@@ -12,7 +12,6 @@ from auditor.attack_library import (
     get_attacks_by_owasp,
     get_attacks_by_severity,
     get_category_stats,
-    OWASP_MAPPING,
 )
 
 

@@ -29,7 +29,13 @@ jobs:
           pip install -r requirements.txt
       - name: Lint
         run: |
-          pip install ruff
+          # Pinned: an unpinned "pip install ruff" broke a sibling project's
+          # CI when a routine install silently picked up a newer ruff
+          # release with a much broader default lint rule set (141
+          # unrelated findings surfaced on an unrelated push there). Pinning
+          # here so this repo's effective rule set only changes on a
+          # deliberate version bump.
+          pip install ruff==0.16.0
           ruff check src/ tests/
           ruff format --check src/ tests/
       - name: Test with coverage

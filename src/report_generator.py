@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any
 from xml.sax.saxutils import escape as _xml_escape
 
-from .owasp_scorer import score_audit_results, OWASP_CATEGORIES, classify_attack
+from .owasp_scorer import OWASP_CATEGORIES, classify_attack, score_audit_results
 
 # ---------------------------------------------------------------------------
 # Hardcoded per-category recommendations

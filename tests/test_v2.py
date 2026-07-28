@@ -11,21 +11,20 @@ test_v2.py — V2 test suite: mutation engine, OWASP scorer, PDF report generato
 from __future__ import annotations
 
 import base64
-from pathlib import Path
-
-import pytest
 
 # ---------------------------------------------------------------------------
 # Imports under test
 # ---------------------------------------------------------------------------
 import sys
+from pathlib import Path
+
+import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.mutation_engine import AttackMutationEngine
-from src.owasp_scorer import classify_attack, score_audit_results, OWASP_CATEGORIES
+from src.owasp_scorer import OWASP_CATEGORIES, classify_attack, score_audit_results
 from src.report_generator import generate_report
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
