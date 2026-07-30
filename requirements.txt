@@ -16,7 +16,7 @@ plotly>=6.9.0
 pandas>=2.2.2
 
 # Visualization
-matplotlib>=3.11.0
+matplotlib>=3.11.1
 numpy>=2.4.6,<2.5
 
 # Testing
