@@ -277,7 +277,7 @@ curl -X POST http://localhost:8000/detect \
 
 | Layer | Technology |
 |-------|-----------|
-| Language | Python 3.11 |
+| Language | Python 3.12 |
 | API | FastAPI + slowapi (rate limiting) + Uvicorn |
 | Database | SQLite + SQLAlchemy 2.0 |
 | Detection | sentence-transformers (MiniLM) + regex + keyword, TF-IDF cosine fallback |
