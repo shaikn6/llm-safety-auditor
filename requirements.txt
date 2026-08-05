@@ -5,7 +5,7 @@ sqlalchemy>=2.0.51
 pydantic>=2.13.4
 
 # Semantic detection (falls back to TF-IDF if not installed)
-sentence-transformers>=5.6.0
+sentence-transformers>=5.6.1
 
 # PDF generation
 reportlab>=4.2.0
