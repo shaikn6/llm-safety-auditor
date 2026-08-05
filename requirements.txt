@@ -13,7 +13,7 @@ reportlab>=4.2.0
 # Dashboard
 streamlit>=1.60.0
 plotly>=6.9.0
-pandas>=2.2.2
+pandas>=3.0.5
 
 # Visualization
 matplotlib>=3.11.1
