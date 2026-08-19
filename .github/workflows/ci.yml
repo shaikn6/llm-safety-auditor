@@ -41,7 +41,7 @@ jobs:
       - name: Test with coverage
         run: |
           pip install pytest pytest-cov
-          pytest tests/ -v --cov --cov-report=term-missing --cov-fail-under=95
+          pytest tests/ -v --cov --cov-config=.coveragerc --cov-report=term-missing --cov-fail-under=95
 
   security:
     name: Security Scan

@@ -61,7 +61,7 @@ The framework is a fully reproducible harness, not a benchmark of any specific m
 
 - **50 adversarial attack templates** across 5 categories, all mapped to the OWASP LLM Top 10 (`auditor/attack_library.py`)
 - **4-layer detection pipeline** with short-circuit evaluation and a TF-IDF fallback when `sentence-transformers` is unavailable (`auditor/detector.py`)
-- **391 test functions** across 9 suites; CI enforces a **≥95% coverage gate** (`--cov-fail-under=95`), currently at 99.02%
+- **404 test functions** across 10 suites; CI enforces a **≥95% coverage gate** (`--cov-fail-under=95`), currently at 97.26%, measured across the full source tree (`auditor`, `api`, `src`, `scoring`, `replay`, `ci`, `attacks` — see `.coveragerc`), including the FastAPI layer
 - OWASP LLM Top 10 compliance grid (PASS / WARN / FAIL) exported as audit evidence (`auditor/evaluator.py`, `scoring/owasp_scorer.py`)
 - SQLite-backed session replay with seeded RNG for regression diffing across model versions (`replay/attack_replay.py`)
 
@@ -227,8 +227,8 @@ generate_json_report(report, 'audit_report.json')
 generate_pdf_report(report, 'audit_report.pdf')
 "
 
-# Run tests
-pytest tests/ -v --cov=auditor --cov-report=term-missing
+# Run tests (coverage scope defined in .coveragerc: auditor, api, src, scoring, replay, ci, attacks)
+pytest tests/ -v --cov --cov-config=.coveragerc --cov-report=term-missing
 
 # Start API server
 uvicorn api.main:app --reload
@@ -286,7 +286,7 @@ curl -X POST http://localhost:8000/detect \
 | Dashboard | Streamlit + Plotly + Matplotlib |
 | Client | TypeScript (axios) |
 | CI integration | generated GitHub Actions workflow + SARIF |
-| Testing | pytest + pytest-cov (391 tests, ≥95% gate, 99.02% actual); ruff · mypy · bandit · pip-audit |
+| Testing | pytest + pytest-cov (404 tests, ≥95% gate, 97.26% actual across full source tree); ruff · mypy · bandit · pip-audit |
 | Containerization | Docker + Docker Compose |
 
 ---

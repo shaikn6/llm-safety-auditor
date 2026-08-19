@@ -1,0 +1,13 @@
+[run]
+source =
+    api
+    attacks
+    auditor
+    ci
+    replay
+    scoring
+    src
+branch = false
+
+[report]
+skip_empty = true
