@@ -233,7 +233,7 @@ class AttackMutationEngine:
         # (base64 encoding and noise injection can inflate payload size).
         return result[: self._max_output]
 
-    def generate_variants(self, n_variants: int = 4) -> list[str]:
+    def generate_variants(self, n_variants: int = 6) -> list[str]:
         """
         For each seed, generate *n_variants* mutated versions.
 
@@ -259,11 +259,12 @@ class AttackMutationEngine:
         """
         Main method: returns full expanded attack corpus.
 
-        Returns seeds + all mutations (default 4 variants per seed).
-        Total = len(seeds) + len(seeds) * 4 = len(seeds) * 5.
-        With 50 seeds → 250 total (> 200).
+        Returns seeds + all mutations (default 6 variants per seed, one per
+        strategy — exercises all ALL_STRATEGIES instead of a round-robin subset).
+        Total = len(seeds) + len(seeds) * 6 = len(seeds) * 7.
+        With 50 seeds → 350 total (> 200).
         """
-        variants = self.generate_variants(n_variants=4)
+        variants = self.generate_variants(n_variants=6)
         return list(self.seeds) + variants
 
     # ------------------------------------------------------------------

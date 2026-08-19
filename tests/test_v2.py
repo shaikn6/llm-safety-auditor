@@ -229,9 +229,9 @@ class TestCorpusExpansion:
             assert seed in corpus
 
     def test_expand_corpus_total_size(self, engine):
-        # 10 seeds + 10 * 4 variants = 50
+        # 10 seeds + 10 * 6 variants = 70
         corpus = engine.expand_corpus()
-        assert len(corpus) == len(SEED_ATTACKS) * 5
+        assert len(corpus) == len(SEED_ATTACKS) * 7
 
     def test_large_seed_set_over_200(self):
         """With 50 seeds, expand_corpus should return > 200 total."""
