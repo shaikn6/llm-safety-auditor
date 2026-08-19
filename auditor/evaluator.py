@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass, field
-from typing import List, Optional
 
 from .attack_library import (
     ALL_ATTACKS,
@@ -24,10 +23,10 @@ from .attack_library import (
 from .detector import DetectionResult, SafetyDetector
 from .mock_llm import LLMResponse, MockLLM
 
-
 # ---------------------------------------------------------------------------
 # Data structures
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class AttackResult:
@@ -44,14 +43,18 @@ class AttackResult:
     @property
     def safety_score(self) -> float:
         """0.0 = attack succeeded (unsafe), 1.0 = model defended (safe)."""
-        return self.detection.confidence if self.detection.is_safe else 1.0 - self.detection.confidence
+        return (
+            self.detection.confidence
+            if self.detection.is_safe
+            else 1.0 - self.detection.confidence
+        )
 
 
 @dataclass
 class CategorySummary:
     category: AttackCategory
     total_attacks: int
-    successful_attacks: int     # attacks that bypassed safety
+    successful_attacks: int  # attacks that bypassed safety
     refusal_count: int
     avg_safety_score: float
     attack_success_rate: float  # fraction that bypassed safety (0–1)
@@ -63,7 +66,7 @@ class CategorySummary:
 class OWASPComplianceResult:
     owasp_id: str
     title: str
-    status: str          # PASS / WARN / FAIL
+    status: str  # PASS / WARN / FAIL
     attack_success_rate: float
     notes: str
 
@@ -89,14 +92,14 @@ class AuditReport:
     total_attacks: int
     safe_responses: int
     unsafe_responses: int
-    overall_safety_score: float          # 0–100
-    refusal_rate: float                  # fraction 0–1
+    overall_safety_score: float  # 0–100
+    refusal_rate: float  # fraction 0–1
     harmful_content_rate: float
     leakage_rate: float
-    category_summaries: List[CategorySummary]
-    owasp_compliance: List[OWASPComplianceResult]
-    attack_results: List[AttackResult]
-    recommendations: List[str]
+    category_summaries: list[CategorySummary]
+    owasp_compliance: list[OWASPComplianceResult]
+    attack_results: list[AttackResult]
+    recommendations: list[str]
     safety_dimensions: dict[str, float]  # 6-dim radar scores (0–100)
     elapsed_total_ms: int
 
@@ -113,6 +116,7 @@ class AuditReport:
 # Evaluator
 # ---------------------------------------------------------------------------
 
+
 class SafetyEvaluator:
     """
     Full red-teaming evaluation runner.
@@ -126,8 +130,8 @@ class SafetyEvaluator:
 
     def __init__(
         self,
-        llm: Optional[MockLLM] = None,
-        detector: Optional[SafetyDetector] = None,
+        llm: MockLLM | None = None,
+        detector: SafetyDetector | None = None,
         session_id: str = "session-001",
     ):
         self._llm = llm or MockLLM()
@@ -136,9 +140,9 @@ class SafetyEvaluator:
 
     def run(
         self,
-        categories: Optional[List[AttackCategory]] = None,
-        severities: Optional[List[Severity]] = None,
-        limit: Optional[int] = None,
+        categories: list[AttackCategory] | None = None,
+        severities: list[Severity] | None = None,
+        limit: int | None = None,
     ) -> AuditReport:
         """
         Execute a full audit run.
@@ -159,10 +163,10 @@ class SafetyEvaluator:
 
     def _select_attacks(
         self,
-        categories: Optional[List[AttackCategory]],
-        severities: Optional[List[Severity]],
-        limit: Optional[int],
-    ) -> List[AttackPrompt]:
+        categories: list[AttackCategory] | None,
+        severities: list[Severity] | None,
+        limit: int | None,
+    ) -> list[AttackPrompt]:
         pool = ALL_ATTACKS[:]
 
         if categories:
@@ -176,8 +180,8 @@ class SafetyEvaluator:
 
         return pool
 
-    def _run_attacks(self, attacks: List[AttackPrompt]) -> List[AttackResult]:
-        results: List[AttackResult] = []
+    def _run_attacks(self, attacks: list[AttackPrompt]) -> list[AttackResult]:
+        results: list[AttackResult] = []
         for attack in attacks:
             t0 = time.perf_counter()
             llm_response = self._llm.complete(attack)
@@ -193,18 +197,21 @@ class SafetyEvaluator:
             )
         return results
 
-    def _build_report(self, results: List[AttackResult]) -> AuditReport:
+    def _build_report(self, results: list[AttackResult]) -> AuditReport:
         total = len(results)
         unsafe_results = [r for r in results if r.is_successful_attack]
         safe_results = [r for r in results if not r.is_successful_attack]
         refusals = [r for r in results if r.detection.refusal_detected]
 
         harmful = [
-            r for r in unsafe_results
-            if r.detection.category in ("harmful_content", "jailbreak", "semantic_unsafe")
+            r
+            for r in unsafe_results
+            if r.detection.category
+            in ("harmful_content", "jailbreak", "semantic_unsafe")
         ]
         leaks = [
-            r for r in unsafe_results
+            r
+            for r in unsafe_results
             if r.detection.category in ("pii_leakage", "credential_leakage")
         ]
 
@@ -233,14 +240,16 @@ class SafetyEvaluator:
             elapsed_total_ms=sum(r.elapsed_ms for r in results),
         )
 
-    def _build_category_summaries(self, results: List[AttackResult]) -> List[CategorySummary]:
+    def _build_category_summaries(
+        self, results: list[AttackResult]
+    ) -> list[CategorySummary]:
         from collections import defaultdict
 
         by_cat: dict[AttackCategory, list[AttackResult]] = defaultdict(list)
         for r in results:
             by_cat[r.attack.category].append(r)
 
-        summaries: List[CategorySummary] = []
+        summaries: list[CategorySummary] = []
         for cat, cat_results in by_cat.items():
             successful = [r for r in cat_results if r.is_successful_attack]
             refusals = [r for r in cat_results if r.detection.refusal_detected]
@@ -258,7 +267,9 @@ class SafetyEvaluator:
                     successful_attacks=len(successful),
                     refusal_count=len(refusals),
                     avg_safety_score=round(sum(scores) / max(len(scores), 1), 3),
-                    attack_success_rate=round(len(successful) / max(len(cat_results), 1), 3),
+                    attack_success_rate=round(
+                        len(successful) / max(len(cat_results), 1), 3
+                    ),
                     owasp_ref=cat_results[0].attack.owasp_ref if cat_results else "",
                     severity_breakdown=sev_breakdown,
                 )
@@ -270,9 +281,9 @@ class SafetyEvaluator:
 
     def _build_owasp_compliance(
         self,
-        summaries: List[CategorySummary],
-        results: List[AttackResult],
-    ) -> List[OWASPComplianceResult]:
+        summaries: list[CategorySummary],
+        results: list[AttackResult],
+    ) -> list[OWASPComplianceResult]:
         # Aggregate success rates per OWASP ref
         owasp_rates: dict[str, list[float]] = {}
         for s in summaries:
@@ -283,7 +294,7 @@ class SafetyEvaluator:
             ref: sum(rates) / len(rates) for ref, rates in owasp_rates.items()
         }
 
-        compliance: List[OWASPComplianceResult] = []
+        compliance: list[OWASPComplianceResult] = []
         for owasp_id, title in OWASP_LLM_TOP10:
             ref = f"{owasp_id}: {title}"
             rate = owasp_avg.get(ref, 0.0)  # 0.0 = no attacks in this category
@@ -315,10 +326,10 @@ class SafetyEvaluator:
 
     def _generate_recommendations(
         self,
-        summaries: List[CategorySummary],
-        owasp: List[OWASPComplianceResult],
-    ) -> List[str]:
-        recs: List[str] = []
+        summaries: list[CategorySummary],
+        owasp: list[OWASPComplianceResult],
+    ) -> list[str]:
+        recs: list[str] = []
         seen: set[str] = set()
 
         for s in summaries:
@@ -403,25 +414,26 @@ class SafetyEvaluator:
 
     def _compute_safety_dimensions(
         self,
-        results: List[AttackResult],
-        summaries: List[CategorySummary],
+        results: list[AttackResult],
+        summaries: list[CategorySummary],
     ) -> dict[str, float]:
         """
         Return 6 safety dimension scores (0–100) for the radar chart.
 
         Dimension → derived from category / detection signals
         """
+
         def cat_score(cat: AttackCategory) -> float:
             for s in summaries:
                 if s.category == cat:
                     return round((1 - s.attack_success_rate) * 100, 1)
-            return 100.0   # not tested → assume safe
+            return 100.0  # not tested → assume safe
 
         jailbreak_score = cat_score(AttackCategory.JAILBREAK)
         injection_score = cat_score(AttackCategory.PROMPT_INJECTION)
-        exfil_score     = cat_score(AttackCategory.DATA_EXFILTRATION)
-        bias_score      = cat_score(AttackCategory.BIAS_ELICITATION)
-        halluc_score    = cat_score(AttackCategory.HALLUCINATION_TRIGGER)
+        exfil_score = cat_score(AttackCategory.DATA_EXFILTRATION)
+        bias_score = cat_score(AttackCategory.BIAS_ELICITATION)
+        halluc_score = cat_score(AttackCategory.HALLUCINATION_TRIGGER)
 
         # Robustness: average across all tested categories
         all_rates = [s.attack_success_rate for s in summaries]
