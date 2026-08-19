@@ -14,15 +14,18 @@ Endpoints:
 
 from __future__ import annotations
 
+# ---------------------------------------------------------------------------
+# App setup
+# ---------------------------------------------------------------------------
+import os
 import uuid
-from typing import List, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, field_validator
 from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 
 from api.database import get_db, init_db
@@ -38,12 +41,6 @@ from auditor.attack_library import (
 from auditor.detector import SafetyDetector
 from auditor.evaluator import SafetyEvaluator
 from auditor.mock_llm import MockLLM
-
-# ---------------------------------------------------------------------------
-# App setup
-# ---------------------------------------------------------------------------
-
-import os
 
 # ---------------------------------------------------------------------------
 # Rate limiter setup
@@ -78,7 +75,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_ALLOWED_ORIGINS,
-    allow_credentials=False,   # must be False when origins are not a whitelist of trusted domains
+    allow_credentials=False,  # must be False when origins are not a whitelist of trusted domains
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type", "Authorization"],
 )
@@ -93,17 +90,18 @@ def startup_event():
 # Pydantic schemas
 # ---------------------------------------------------------------------------
 
+
 class AuditRunRequest(BaseModel):
-    session_id: Optional[str] = None
-    categories: Optional[List[str]] = None   # filter by AttackCategory
-    severities: Optional[List[str]] = None   # filter by Severity
-    limit: Optional[int] = None
-    use_semantic_detector: bool = False       # set True if sentence-transformers installed
+    session_id: str | None = None
+    categories: list[str] | None = None  # filter by AttackCategory
+    severities: list[str] | None = None  # filter by Severity
+    limit: int | None = None
+    use_semantic_detector: bool = False  # set True if sentence-transformers installed
     llm_seed: int = 42
 
     @field_validator("limit")
     @classmethod
-    def _bound_limit(cls, v: Optional[int]) -> Optional[int]:
+    def _bound_limit(cls, v: int | None) -> int | None:
         """Cap attack limit to prevent DoS via unbounded audit runs."""
         if v is not None and (v < 1 or v > 200):
             raise ValueError("limit must be between 1 and 200")
@@ -111,7 +109,7 @@ class AuditRunRequest(BaseModel):
 
     @field_validator("session_id")
     @classmethod
-    def _sanitize_session_id(cls, v: Optional[str]) -> Optional[str]:
+    def _sanitize_session_id(cls, v: str | None) -> str | None:
         if v is not None and len(v) > 128:
             raise ValueError("session_id must be 128 characters or fewer")
         return v
@@ -124,7 +122,7 @@ class AttackPromptOut(BaseModel):
     expected_behavior: str
     severity: str
     owasp_ref: str
-    tags: List[str]
+    tags: list[str]
 
 
 class DetectionRequest(BaseModel):
@@ -143,9 +141,9 @@ class DetectionRequest(BaseModel):
 class DetectionOut(BaseModel):
     is_safe: bool
     confidence: float
-    triggered_rules: List[str]
-    category: Optional[str]
-    layers_checked: List[str]
+    triggered_rules: list[str]
+    category: str | None
+    layers_checked: list[str]
     refusal_detected: bool
     semantic_score: float
 
@@ -175,7 +173,7 @@ class AttackResultOut(BaseModel):
     safety_score: float
     confidence: float
     refusal_detected: bool
-    detection_category: Optional[str]
+    detection_category: str | None
     triggered_rules: list
     elapsed_ms: int
 
@@ -183,6 +181,7 @@ class AttackResultOut(BaseModel):
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _persist_session(db: Session, report) -> DBAuditSession:
     session_row = DBAuditSession(
@@ -239,6 +238,7 @@ def _persist_session(db: Session, report) -> DBAuditSession:
 # Endpoints
 # ---------------------------------------------------------------------------
 
+
 @app.get("/health")
 def health():
     return {"status": "ok", "service": "llm-safety-auditor"}
@@ -246,7 +246,7 @@ def health():
 
 @app.post("/audit/run", response_model=SessionSummaryOut)
 @limiter.limit("5/minute")
-def run_audit(request: Request, req: AuditRunRequest, db: Session = Depends(get_db)):
+def run_audit(request: Request, req: AuditRunRequest, db: Session = Depends(get_db)):  # noqa: B008
     """Run a new adversarial audit session against the mock LLM."""
     session_id = req.session_id or f"session-{uuid.uuid4().hex[:8]}"
 
@@ -269,7 +269,9 @@ def run_audit(request: Request, req: AuditRunRequest, db: Session = Depends(get_
     detector = SafetyDetector(use_semantic=req.use_semantic_detector)
     evaluator = SafetyEvaluator(llm=llm, detector=detector, session_id=session_id)
 
-    report = evaluator.run(categories=categories, severities=severities, limit=req.limit)
+    report = evaluator.run(
+        categories=categories, severities=severities, limit=req.limit
+    )
     _persist_session(db, report)
 
     return SessionSummaryOut(
@@ -298,7 +300,7 @@ def run_audit(request: Request, req: AuditRunRequest, db: Session = Depends(get_
 
 
 @app.get("/audit/sessions/list")
-def list_sessions(db: Session = Depends(get_db)):
+def list_sessions(db: Session = Depends(get_db)):  # noqa: B008
     """List all audit sessions."""
     sessions = db.query(DBAuditSession).order_by(DBAuditSession.created_at.desc()).all()
     return [
@@ -315,11 +317,11 @@ def list_sessions(db: Session = Depends(get_db)):
 
 
 @app.get("/audit/{session_id}", response_model=SessionSummaryOut)
-def get_session(session_id: str, db: Session = Depends(get_db)):
+def get_session(session_id: str, db: Session = Depends(get_db)):  # noqa: B008
     """Retrieve audit session summary by ID."""
-    session = db.query(DBAuditSession).filter(
-        DBAuditSession.session_id == session_id
-    ).first()
+    session = (
+        db.query(DBAuditSession).filter(DBAuditSession.session_id == session_id).first()
+    )
     if not session:
         raise HTTPException(status_code=404, detail=f"Session '{session_id}' not found")
 
@@ -340,19 +342,19 @@ def get_session(session_id: str, db: Session = Depends(get_db)):
     )
 
 
-@app.get("/audit/{session_id}/results", response_model=List[AttackResultOut])
+@app.get("/audit/{session_id}/results", response_model=list[AttackResultOut])
 def get_session_results(
     session_id: str,
-    category: Optional[str] = Query(None),
+    category: str | None = Query(None),
     unsafe_only: bool = Query(False),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db),  # noqa: B008
 ):
     """Retrieve all attack results for a session."""
     q = db.query(DBAttackResult).filter(DBAttackResult.session_id == session_id)
     if category:
         q = q.filter(DBAttackResult.category == category)
     if unsafe_only:
-        q = q.filter(DBAttackResult.is_safe == False)  # noqa: E712
+        q = q.filter(DBAttackResult.is_safe == False)
 
     rows = q.all()
     return [
@@ -373,10 +375,10 @@ def get_session_results(
     ]
 
 
-@app.get("/attacks", response_model=List[AttackPromptOut])
+@app.get("/attacks", response_model=list[AttackPromptOut])
 def list_attacks(
-    category: Optional[str] = Query(None),
-    severity: Optional[str] = Query(None),
+    category: str | None = Query(None),
+    severity: str | None = Query(None),
 ):
     """List all available attack prompts with optional filters."""
     attacks = ALL_ATTACKS[:]

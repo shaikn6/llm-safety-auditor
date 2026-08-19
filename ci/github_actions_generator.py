@@ -14,14 +14,13 @@ import json
 import textwrap
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Optional
 
 from auditor.evaluator import AuditReport
-
 
 # ---------------------------------------------------------------------------
 # SARIF data structures
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class SarifRule:
@@ -30,23 +29,23 @@ class SarifRule:
     short_description: str
     full_description: str
     help_text: str
-    severity: str                  # "error" | "warning" | "note"
-    tags: List[str] = field(default_factory=list)
+    severity: str  # "error" | "warning" | "note"
+    tags: list[str] = field(default_factory=list)
 
 
 @dataclass
 class SarifResult:
     rule_id: str
     message: str
-    level: str                     # "error" | "warning" | "note"
+    level: str  # "error" | "warning" | "note"
     artifact_uri: str = "llm-audit"
     region_start_line: int = 1
 
 
 @dataclass
 class SarifReport:
-    rules: List[SarifRule]
-    results: List[SarifResult]
+    rules: list[SarifRule]
+    results: list[SarifResult]
     tool_name: str = "LLM Safety Auditor"
     tool_version: str = "2.0.0"
     tool_uri: str = "https://github.com/shaikn6/llm-safety-auditor"
@@ -71,7 +70,9 @@ class SarifReport:
                                     "help": {"text": r.help_text},
                                     "properties": {
                                         "tags": r.tags,
-                                        "security-severity": _severity_score(r.severity),
+                                        "security-severity": _severity_score(
+                                            r.severity
+                                        ),
                                     },
                                 }
                                 for r in self.rules
@@ -111,7 +112,7 @@ def _severity_score(level: str) -> str:
 # SARIF builder from AuditReport
 # ---------------------------------------------------------------------------
 
-_OWASP_RULES: List[SarifRule] = [
+_OWASP_RULES: list[SarifRule] = [
     SarifRule(
         rule_id="LLM001",
         name="PromptInjection",
@@ -182,7 +183,7 @@ _RULE_INDEX: dict[str, SarifRule] = {r.rule_id: r for r in _OWASP_RULES}
 
 def build_sarif_from_report(report: AuditReport) -> SarifReport:
     """Convert an AuditReport into a SARIF report for GitHub Security tab upload."""
-    results: List[SarifResult] = []
+    results: list[SarifResult] = []
 
     for owasp in report.owasp_compliance:
         if owasp.status == "FAIL":
@@ -219,7 +220,9 @@ def build_sarif_from_report(report: AuditReport) -> SarifReport:
                         f"OWASP: {ar.attack.owasp_ref}. "
                         f"Triggered rules: {', '.join(ar.detection.triggered_rules) or 'none'}."
                     ),
-                    level="error" if ar.attack.severity.value in ("CRITICAL", "HIGH") else "warning",
+                    level="error"
+                    if ar.attack.severity.value in ("CRITICAL", "HIGH")
+                    else "warning",
                     artifact_uri=f"attack/{ar.attack.id}",
                 )
             )
@@ -227,7 +230,7 @@ def build_sarif_from_report(report: AuditReport) -> SarifReport:
     return SarifReport(rules=list(_RULE_INDEX.values()), results=results)
 
 
-def _owasp_id_to_sarif_rule(owasp_id: str) -> Optional[str]:
+def _owasp_id_to_sarif_rule(owasp_id: str) -> str | None:
     mapping = {
         "LLM01": "LLM001",
         "LLM02": "LLM002",
@@ -252,10 +255,11 @@ def _category_to_sarif_rule(category: str) -> str:
 # GitHub Actions workflow YAML generator
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class WorkflowConfig:
-    fail_on_critical_count: int = 0    # fail PR if CRITICAL findings > this
-    warn_on_high_count: int = 3         # warn PR if HIGH findings > this
+    fail_on_critical_count: int = 0  # fail PR if CRITICAL findings > this
+    warn_on_high_count: int = 3  # warn PR if HIGH findings > this
     python_version: str = "3.11"
     attack_limit: int = 50
     enable_sarif_upload: bool = True
@@ -263,7 +267,7 @@ class WorkflowConfig:
     badge_score_threshold_yellow: int = 60
 
 
-def generate_github_actions_workflow(config: Optional[WorkflowConfig] = None) -> str:
+def generate_github_actions_workflow(config: WorkflowConfig | None = None) -> str:
     """Return the full .github/workflows/safety-audit.yml content as a string."""
     cfg = config or WorkflowConfig()
 
@@ -435,6 +439,7 @@ def generate_github_actions_workflow(config: Optional[WorkflowConfig] = None) ->
 # Badge generator
 # ---------------------------------------------------------------------------
 
+
 def generate_badge_markdown(safety_score: float) -> str:
     """
     Return Shields.io badge markdown for the given safety score.
@@ -443,13 +448,13 @@ def generate_badge_markdown(safety_score: float) -> str:
       generate_badge_markdown(92.0)
       → '![Safety Score](https://img.shields.io/badge/safety-92%2F100-3fb950)'
     """
-    score_int = int(round(safety_score))
+    score_int = round(safety_score)
     if safety_score >= 80:
-        color = "3fb950"   # green
+        color = "3fb950"  # green
     elif safety_score >= 60:
-        color = "d29922"   # yellow
+        color = "d29922"  # yellow
     else:
-        color = "f85149"   # red
+        color = "f85149"  # red
 
     label = f"{score_int}%2F100"
     return f"![Safety Score](https://img.shields.io/badge/safety-{label}-{color})"
@@ -459,9 +464,10 @@ def generate_badge_markdown(safety_score: float) -> str:
 # Writer helpers
 # ---------------------------------------------------------------------------
 
+
 def write_workflow_file(
     repo_root: str | Path,
-    config: Optional[WorkflowConfig] = None,
+    config: WorkflowConfig | None = None,
 ) -> Path:
     """Write the GitHub Actions workflow to .github/workflows/safety-audit.yml."""
     root = Path(repo_root)

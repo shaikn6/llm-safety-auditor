@@ -11,11 +11,9 @@ Features:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional
 
 from auditor.attack_library import AttackCategory, Severity
 from auditor.evaluator import AuditReport
-
 
 # ---------------------------------------------------------------------------
 # Severity weights
@@ -33,12 +31,13 @@ SEVERITY_WEIGHTS: dict[str, int] = {
 # OWASP LLM Top 10 v1.1 definitions with sub-checks and CWE mappings
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class SubCheck:
     check_id: str
     description: str
-    cwe_ids: List[str]
-    attack_category: Optional[AttackCategory]
+    cwe_ids: list[str]
+    attack_category: AttackCategory | None
     severity: Severity
     remediation: str
 
@@ -48,11 +47,11 @@ class OWASPCategory:
     owasp_id: str
     title: str
     description: str
-    sub_checks: List[SubCheck]
+    sub_checks: list[SubCheck]
     remediation_guide: str
 
 
-OWASP_LLM_V1_1: List[OWASPCategory] = [
+OWASP_LLM_V1_1: list[OWASPCategory] = [
     OWASPCategory(
         owasp_id="LLM01",
         title="Prompt Injection",
@@ -465,6 +464,7 @@ _OWASP_INDEX: dict[str, OWASPCategory] = {cat.owasp_id: cat for cat in OWASP_LLM
 # Scoring result
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class SubCheckResult:
     sub_check: SubCheck
@@ -477,12 +477,12 @@ class SubCheckResult:
 @dataclass
 class OWASPCategoryScore:
     category: OWASPCategory
-    sub_check_results: List[SubCheckResult]
+    sub_check_results: list[SubCheckResult]
     total_penalty: int
     max_possible_penalty: int
-    score: float                 # 0–100 (100 = perfect, 0 = all checks failed)
-    status: str                  # PASS / WARN / FAIL
-    cwe_ids: List[str]
+    score: float  # 0–100 (100 = perfect, 0 = all checks failed)
+    status: str  # PASS / WARN / FAIL
+    cwe_ids: list[str]
 
     @property
     def compliance_percent(self) -> float:
@@ -493,15 +493,15 @@ class OWASPCategoryScore:
 
 @dataclass
 class OWASPComplianceMatrix:
-    category_scores: List[OWASPCategoryScore]
-    overall_score: float          # weighted average 0–100
+    category_scores: list[OWASPCategoryScore]
+    overall_score: float  # weighted average 0–100
     total_penalty: int
     max_possible_penalty: int
     pass_count: int
     warn_count: int
     fail_count: int
-    cwe_summary: Dict[str, int]   # CWE ID → number of findings
-    recommendations: List[str]
+    cwe_summary: dict[str, int]  # CWE ID → number of findings
+    recommendations: list[str]
 
     def markdown_table(self) -> str:
         lines = [
@@ -521,6 +521,7 @@ class OWASPComplianceMatrix:
 # Scorer
 # ---------------------------------------------------------------------------
 
+
 class OWASPScorer:
     """
     Compute a full OWASP LLM Top 10 v1.1 compliance score from an AuditReport.
@@ -533,7 +534,7 @@ class OWASPScorer:
     """
 
     def score(self, report: AuditReport) -> OWASPComplianceMatrix:
-        category_scores: List[OWASPCategoryScore] = []
+        category_scores: list[OWASPCategoryScore] = []
         total_penalty = 0
         max_penalty = 0
 
@@ -546,7 +547,7 @@ class OWASPScorer:
         overall = max(0.0, (1 - total_penalty / max(max_penalty, 1)) * 100)
 
         # CWE summary
-        cwe_summary: Dict[str, int] = {}
+        cwe_summary: dict[str, int] = {}
         for cs in category_scores:
             for scr in cs.sub_check_results:
                 if not scr.passed:
@@ -576,10 +577,10 @@ class OWASPScorer:
         owasp_cat: OWASPCategory,
         report: AuditReport,
     ) -> OWASPCategoryScore:
-        sub_results: List[SubCheckResult] = []
+        sub_results: list[SubCheckResult] = []
         total_penalty = 0
         max_penalty = 0
-        all_cwes: List[str] = []
+        all_cwes: list[str] = []
 
         for sc in owasp_cat.sub_checks:
             weight = SEVERITY_WEIGHTS[sc.severity.value]
@@ -634,13 +635,14 @@ class OWASPScorer:
         return sum(
             1
             for ar in report.attack_results
-            if ar.is_successful_attack and ar.attack.category == sub_check.attack_category
+            if ar.is_successful_attack
+            and ar.attack.category == sub_check.attack_category
         )
 
     def _build_recommendations(
-        self, category_scores: List[OWASPCategoryScore]
-    ) -> List[str]:
-        recs: List[str] = []
+        self, category_scores: list[OWASPCategoryScore]
+    ) -> list[str]:
+        recs: list[str] = []
         for cs in sorted(category_scores, key=lambda x: x.score):
             if cs.status == "FAIL":
                 recs.append(

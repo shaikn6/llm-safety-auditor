@@ -16,12 +16,11 @@ import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import List, Optional
+from typing import Self
 
 from auditor.detector import SafetyDetector
 from auditor.evaluator import AuditReport, SafetyEvaluator
 from auditor.mock_llm import MockLLM
-
 
 # ---------------------------------------------------------------------------
 # Default database path
@@ -73,6 +72,7 @@ CREATE TABLE IF NOT EXISTS audit_runs (
 # Dataclasses
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class StoredAttackRun:
     run_id: str
@@ -85,7 +85,7 @@ class StoredAttackRun:
     is_safe: bool
     confidence: float
     refusal: bool
-    triggered_rules: List[str]
+    triggered_rules: list[str]
     safety_score: float
     elapsed_ms: int
     created_at: str
@@ -99,7 +99,7 @@ class RegressionFinding:
     template: str
     v1_safe: bool
     v2_safe: bool
-    regression_type: str           # "NEW_FAILURE" | "NEW_PASS"
+    regression_type: str  # "NEW_FAILURE" | "NEW_PASS"
     v1_model: str
     v2_model: str
 
@@ -118,12 +118,12 @@ class RegressionFinding:
 class DiffReport:
     model_v1: str
     model_v2: str
-    regressions: List[RegressionFinding]     # safe → unsafe (bad)
-    improvements: List[RegressionFinding]    # unsafe → safe (good)
+    regressions: list[RegressionFinding]  # safe → unsafe (bad)
+    improvements: list[RegressionFinding]  # unsafe → safe (good)
     unchanged_safe: int
     unchanged_unsafe: int
-    v1_safety_score: Optional[float] = None
-    v2_safety_score: Optional[float] = None
+    v1_safety_score: float | None = None
+    v2_safety_score: float | None = None
 
     @property
     def net_change(self) -> int:
@@ -161,6 +161,7 @@ class TimelinePoint:
 # Replay store
 # ---------------------------------------------------------------------------
 
+
 class ReplayStore:
     """
     SQLite-backed store for attack runs.
@@ -181,7 +182,7 @@ class ReplayStore:
     def close(self) -> None:
         self._conn.close()
 
-    def __enter__(self) -> "ReplayStore":
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *_) -> None:
@@ -257,27 +258,27 @@ class ReplayStore:
     # Query
     # ------------------------------------------------------------------
 
-    def get_runs_for_model(self, model_version: str) -> List[StoredAttackRun]:
+    def get_runs_for_model(self, model_version: str) -> list[StoredAttackRun]:
         rows = self._conn.execute(
             "SELECT * FROM attack_runs WHERE model_version = ? ORDER BY created_at",
             (model_version,),
         ).fetchall()
         return [self._row_to_stored(r) for r in rows]
 
-    def get_latest_run_id(self, model_version: str) -> Optional[str]:
+    def get_latest_run_id(self, model_version: str) -> str | None:
         row = self._conn.execute(
             "SELECT run_id FROM audit_runs WHERE model_version = ? ORDER BY created_at DESC LIMIT 1",
             (model_version,),
         ).fetchone()
         return row["run_id"] if row else None
 
-    def list_audit_runs(self) -> List[dict]:
+    def list_audit_runs(self) -> list[dict]:
         rows = self._conn.execute(
             "SELECT * FROM audit_runs ORDER BY created_at DESC"
         ).fetchall()
         return [dict(r) for r in rows]
 
-    def get_attack_history(self, attack_id: str) -> List[StoredAttackRun]:
+    def get_attack_history(self, attack_id: str) -> list[StoredAttackRun]:
         rows = self._conn.execute(
             "SELECT * FROM attack_runs WHERE attack_id = ? ORDER BY created_at",
             (attack_id,),
@@ -318,8 +319,8 @@ class ReplayStore:
 
         common_ids = set(v1_runs.keys()) & set(v2_runs.keys())
 
-        regressions: List[RegressionFinding] = []
-        improvements: List[RegressionFinding] = []
+        regressions: list[RegressionFinding] = []
+        improvements: list[RegressionFinding] = []
         unchanged_safe = 0
         unchanged_unsafe = 0
 
@@ -375,7 +376,7 @@ class ReplayStore:
             v2_safety_score=v2_score,
         )
 
-    def _get_safety_score(self, model_version: str) -> Optional[float]:
+    def _get_safety_score(self, model_version: str) -> float | None:
         row = self._conn.execute(
             "SELECT safety_score FROM audit_runs WHERE model_version = ? ORDER BY created_at DESC LIMIT 1",
             (model_version,),
@@ -386,7 +387,7 @@ class ReplayStore:
     # Timeline
     # ------------------------------------------------------------------
 
-    def safety_timeline(self) -> List[TimelinePoint]:
+    def safety_timeline(self) -> list[TimelinePoint]:
         """
         Return the safety score for each audit run, ordered by time.
 
@@ -414,9 +415,9 @@ class ReplayStore:
     def run_regression(
         self,
         model_version: str,
-        llm: Optional[MockLLM] = None,
-        detector: Optional[SafetyDetector] = None,
-        run_id: Optional[str] = None,
+        llm: MockLLM | None = None,
+        detector: SafetyDetector | None = None,
+        run_id: str | None = None,
         notes: str = "",
     ) -> AuditReport:
         """
