@@ -11,7 +11,7 @@ sentence-transformers>=5.6.1
 reportlab>=5.0.0
 
 # Dashboard
-streamlit>=1.60.0
+streamlit>=1.62.0
 plotly>=6.9.0
 pandas>=3.0.5
 
