@@ -12,7 +12,7 @@ cp .env.example .env  # add your API keys
 ## Running Tests
 
 ```bash
-pytest tests/ -v --cov=src
+pytest tests/ -v --cov --cov-config=.coveragerc --cov-report=term-missing --cov-fail-under=95
 ```
 
 ## Pull Request Process

@@ -1,21 +1,27 @@
-version: "3.9"
-
 services:
   api:
     build:
       context: .
       dockerfile: Dockerfile
+      target: production
     container_name: llm-safety-api
     ports:
       - "8000:8000"
     volumes:
-      - .:/app
       - audit_data:/app/data
     environment:
       - DATABASE_URL=sqlite:///./data/llm_safety_auditor.db
-    command: uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+      # Local default. For anything shared, set APP_ENV=production and API_KEYS.
+      - APP_ENV=${APP_ENV:-development}
+      - API_KEYS=${API_KEYS:-}
+      - ENABLE_DOCS=${ENABLE_DOCS:-0}
+      - LLM_PROVIDER=${LLM_PROVIDER:-mock}
+      - LLM_MODEL=${LLM_MODEL:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-}
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -24,14 +30,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: production
     container_name: llm-safety-dashboard
     ports:
       - "8501:8501"
-    volumes:
-      - .:/app
-    environment:
-      - API_BASE_URL=http://api:8000
     command: streamlit run dashboard/app.py --server.port=8501 --server.address=0.0.0.0
+    healthcheck:
+      disable: true
     depends_on:
       api:
         condition: service_healthy

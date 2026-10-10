@@ -1,0 +1,36 @@
+# The Dockerfile copies application packages explicitly; this keeps the build
+# context small and keeps secrets and local state out of it.
+.git
+.github
+.venv
+venv
+.env
+.env.*
+!.env.example
+*.db
+*.sqlite3
+__pycache__
+*.pyc
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.coverage
+coverage.xml
+htmlcov
+bandit-report.json
+pip-audit-report.json
+tests
+docs
+client
+frontend
+scripts
+*.md
+*.pdf
+*.png
+generate_screenshots.py
+generate_v2_screenshots.py
+docker-compose*.yml
+Dockerfile
+Makefile
+.pre-commit-config.yaml
+.coveragerc

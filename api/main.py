@@ -17,15 +17,17 @@ from __future__ import annotations
 # ---------------------------------------------------------------------------
 # App setup
 # ---------------------------------------------------------------------------
+import hmac
 import os
 import uuid
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, field_validator
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from api.database import get_db, init_db
@@ -40,7 +42,7 @@ from auditor.attack_library import (
 )
 from auditor.detector import SafetyDetector
 from auditor.evaluator import SafetyEvaluator
-from auditor.mock_llm import MockLLM
+from auditor.providers import ProviderConfigError, ProviderError, build_provider
 
 # ---------------------------------------------------------------------------
 # Rate limiter setup
@@ -70,15 +72,51 @@ app = FastAPI(
 )
 
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_ALLOWED_ORIGINS,
     allow_credentials=False,  # must be False when origins are not a whitelist of trusted domains
     allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type", "Authorization"],
+    allow_headers=["Content-Type", "Authorization", "X-API-Key"],
 )
+
+# ---------------------------------------------------------------------------
+# API-key auth for mutating routes
+#   API_KEYS — comma-separated accepted keys, sent as the X-API-Key header
+#   APP_ENV  — "development" (default) leaves the routes open when no keys are
+#              configured; any other value requires API_KEYS to be set
+# ---------------------------------------------------------------------------
+_DEV_ENVS = {"development", "dev", "local", "test"}
+
+
+def _is_dev_mode() -> bool:
+    return os.getenv("APP_ENV", "development").strip().lower() in _DEV_ENVS
+
+
+def _configured_api_keys() -> list[str]:
+    return [k.strip() for k in os.getenv("API_KEYS", "").split(",") if k.strip()]
+
+
+def require_api_key(x_api_key: str | None = Header(None)) -> None:
+    """Dependency guarding POST routes. Env is read per request."""
+    keys = _configured_api_keys()
+    if not keys:
+        if _is_dev_mode():
+            return
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "API_KEYS is not configured; mutating endpoints are disabled "
+                "outside development mode."
+            ),
+        )
+    supplied = (x_api_key or "").encode()
+    if not any(hmac.compare_digest(supplied, k.encode()) for k in keys):
+        raise HTTPException(
+            status_code=401, detail="Missing or invalid API key (X-API-Key header)."
+        )
 
 
 @app.on_event("startup")
@@ -110,8 +148,9 @@ class AuditRunRequest(BaseModel):
     @field_validator("session_id")
     @classmethod
     def _sanitize_session_id(cls, v: str | None) -> str | None:
-        if v is not None and len(v) > 128:
-            raise ValueError("session_id must be 128 characters or fewer")
+        # Matches the audit_sessions.session_id column (String(64)).
+        if v is not None and not 1 <= len(v) <= 64:
+            raise ValueError("session_id must be 1 to 64 characters")
         return v
 
 
@@ -128,6 +167,8 @@ class AttackPromptOut(BaseModel):
 class DetectionRequest(BaseModel):
     text: str
     use_semantic: bool = False
+    # Category of the prompt that produced `text`; enables contextual checks.
+    attack_category: AttackCategory | None = None
 
     @field_validator("text")
     @classmethod
@@ -244,11 +285,31 @@ def health():
     return {"status": "ok", "service": "llm-safety-auditor"}
 
 
-@app.post("/audit/run", response_model=SessionSummaryOut)
+@app.post(
+    "/audit/run",
+    response_model=SessionSummaryOut,
+    dependencies=[Depends(require_api_key)],
+)
 @limiter.limit("5/minute")
 def run_audit(request: Request, req: AuditRunRequest, db: Session = Depends(get_db)):  # noqa: B008
-    """Run a new adversarial audit session against the mock LLM."""
+    """Run a new adversarial audit session against the configured LLM provider
+    (LLM_PROVIDER; the seeded mock by default)."""
     session_id = req.session_id or f"session-{uuid.uuid4().hex[:8]}"
+
+    # session_id is unique: refuse a reused id up front instead of failing on
+    # insert after the whole audit has run.
+    if (
+        db.query(DBAuditSession.id)
+        .filter(DBAuditSession.session_id == session_id)
+        .first()
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"Session '{session_id}' already exists. Use a different "
+                "session_id, or omit it to have one generated."
+            ),
+        )
 
     # Parse optional filters
     categories = None
@@ -265,14 +326,27 @@ def run_audit(request: Request, req: AuditRunRequest, db: Session = Depends(get_
         except ValueError as e:
             raise HTTPException(status_code=422, detail=str(e))
 
-    llm = MockLLM(global_seed=req.llm_seed)
+    try:
+        llm = build_provider(seed=req.llm_seed)
+    except ProviderConfigError as e:
+        raise HTTPException(status_code=503, detail=str(e))
     detector = SafetyDetector(use_semantic=req.use_semantic_detector)
     evaluator = SafetyEvaluator(llm=llm, detector=detector, session_id=session_id)
 
-    report = evaluator.run(
-        categories=categories, severities=severities, limit=req.limit
-    )
-    _persist_session(db, report)
+    try:
+        report = evaluator.run(
+            categories=categories, severities=severities, limit=req.limit
+        )
+    except ProviderError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+    try:
+        _persist_session(db, report)
+    except IntegrityError:
+        # Lost a race with a concurrent request using the same session_id.
+        db.rollback()
+        raise HTTPException(
+            status_code=409, detail=f"Session '{session_id}' already exists."
+        )
 
     return SessionSummaryOut(
         session_id=report.session_id,
@@ -428,12 +502,17 @@ def get_attack(attack_id: str):
     )
 
 
-@app.post("/detect", response_model=DetectionOut)
+@app.post(
+    "/detect", response_model=DetectionOut, dependencies=[Depends(require_api_key)]
+)
 @limiter.limit("30/minute")
 def detect(request: Request, req: DetectionRequest):
     """Run the safety detector on arbitrary text."""
     detector = SafetyDetector(use_semantic=req.use_semantic)
-    result = detector.analyze(req.text)
+    result = detector.analyze(
+        req.text,
+        attack_category=req.attack_category.value if req.attack_category else None,
+    )
     return DetectionOut(
         is_safe=result.is_safe,
         confidence=result.confidence,

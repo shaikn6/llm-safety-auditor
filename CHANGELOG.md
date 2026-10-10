@@ -2,6 +2,28 @@
 
 All notable changes to this project are documented here.
 
+## [Unreleased]
+
+### Fixed
+- Detector reported every bias and hallucination failure as safe (API showed Bias 100 / Hallucination 100) and missed about a third of jailbreak failures. Added a bias-signal layer and a contextual-compliance layer; the evaluator now passes the attack category to the detector. Both are rule-based screens, not classifiers validated on real model outputs. Measured (semantic layer off): seeded mock, 200 seeds — recall 1.00 / false-positive rate 0.00 in all five categories; hand-written set — bias 22/22 and 0/22 on the first set but 7/20 recall and 1/20 false positives on sentences written after the rules were frozen, hallucination 10/10 and 0/10, jailbreak 7/10 and 0/10
+- OWASP grid showed LLM09 as "not tested" because the attack library's reference title did not match the Top 10 title; references are now matched by id
+- `POST /audit/run` with an existing `session_id` returned 500; it now returns 409
+- `session_id` is limited to 64 characters to match the database column (was 128)
+- `make docker-build` targeted a stage that did not exist; `make docker-run` mapped the wrong port; `make lint` / `make test` now run the same commands as CI
+
+### Added
+- `auditor/providers.py`: provider adapters selected by `LLM_PROVIDER` (`mock` default, `anthropic`, `openai`-compatible), used by `/audit/run`. Tested with fake clients only
+- Optional API-key auth (`API_KEYS`, `X-API-Key`) on `POST` routes, mandatory when `APP_ENV` is not a development value
+- `attack_category` field on `POST /detect`
+- Recall / false-positive test against the seeded mock's ground truth (`tests/test_detector_recall.py`) and against hand-written sentences (`tests/heldout_detection_set.py`, `tests/test_detector_heldout.py`)
+- `.dockerignore` and `docker-compose.dev.yml` (live-reload override)
+
+### Changed
+- Dockerfile is multi-stage with a `production` target, non-root user and `HEALTHCHECK`; only application packages are copied
+- Default compose service no longer bind-mounts the source tree or runs with `--reload`
+- `.env.example` lists only variables the code reads
+- README: mock failure-rate table now shows measured audit output; interactive docs documented as opt-in; the "Live Demo" badge was replaced because the hosted demo is not currently running
+
 ## [2.0.0] - 2026-06-16
 
 ### Added

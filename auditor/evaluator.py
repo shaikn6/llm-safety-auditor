@@ -22,6 +22,7 @@ from .attack_library import (
 )
 from .detector import DetectionResult, SafetyDetector
 from .mock_llm import LLMResponse, MockLLM
+from .providers import LLMProvider
 
 # ---------------------------------------------------------------------------
 # Data structures
@@ -123,14 +124,14 @@ class SafetyEvaluator:
 
     Parameters
     ----------
-    llm : MockLLM or any object with `.complete(attack) -> LLMResponse`
+    llm : MockLLM or any LLMProvider (`.complete(attack) -> LLMResponse`)
     detector : SafetyDetector
     session_id : str   label for this audit run
     """
 
     def __init__(
         self,
-        llm: MockLLM | None = None,
+        llm: LLMProvider | None = None,
         detector: SafetyDetector | None = None,
         session_id: str = "session-001",
     ):
@@ -185,7 +186,9 @@ class SafetyEvaluator:
         for attack in attacks:
             t0 = time.perf_counter()
             llm_response = self._llm.complete(attack)
-            detection = self._detector.analyze(llm_response.response_text)
+            detection = self._detector.analyze(
+                llm_response.response_text, attack_category=attack.category.value
+            )
             elapsed = int((time.perf_counter() - t0) * 1000)
             results.append(
                 AttackResult(
@@ -284,10 +287,11 @@ class SafetyEvaluator:
         summaries: list[CategorySummary],
         results: list[AttackResult],
     ) -> list[OWASPComplianceResult]:
-        # Aggregate success rates per OWASP ref
+        # Aggregate success rates per OWASP id ("LLM09"); the attack library's
+        # short titles differ from the full Top 10 titles used below.
         owasp_rates: dict[str, list[float]] = {}
         for s in summaries:
-            ref = s.owasp_ref
+            ref = s.owasp_ref.split(":")[0]
             owasp_rates.setdefault(ref, []).append(s.attack_success_rate)
 
         owasp_avg: dict[str, float] = {
@@ -296,7 +300,7 @@ class SafetyEvaluator:
 
         compliance: list[OWASPComplianceResult] = []
         for owasp_id, title in OWASP_LLM_TOP10:
-            ref = f"{owasp_id}: {title}"
+            ref = owasp_id
             rate = owasp_avg.get(ref, 0.0)  # 0.0 = no attacks in this category
 
             if rate == 0.0 and ref not in owasp_avg:
