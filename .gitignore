@@ -15,3 +15,7 @@ build/
 llm_safety_auditor.db
 audit_report.json
 audit_report.pdf
+
+# Local virtual environments
+.venv/
+venv/

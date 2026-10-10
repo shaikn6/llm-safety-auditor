@@ -1,7 +1,9 @@
 .PHONY: help install install-dev lint lint-fix type-check security-code security-deps security test test-fast test-parallel docker-build docker-run docker-scan ci hooks-install hooks-run clean
 
 IMAGE_NAME := llm-safety-auditor
-SRC := src
+# Same directories as .github/workflows/ci.yml and .coveragerc
+SRC := api/ attacks/ auditor/ ci/ replay/ scoring/ src/
+PORT := 8000
 PYTHON := python3
 
 help: ## Show this help
@@ -10,12 +12,12 @@ help: ## Show this help
 install: ## Install dependencies
 	$(PYTHON) -m pip install --upgrade pip
 	pip install -r requirements.txt
-	pip install ruff mypy bandit pip-audit pre-commit
+	pip install ruff==0.16.0 mypy bandit pip-audit pre-commit
 
 install-dev: install ## Install with dev extras
 	pip install pytest pytest-cov pytest-xdist pytest-asyncio httpx
 
-lint: ## Run ruff linter
+lint: ## Run ruff exactly as CI does
 	ruff check $(SRC) tests/
 	ruff format --check $(SRC) tests/
 
@@ -31,25 +33,25 @@ security-code: ## SAST with bandit (strict — security-critical repo)
 	bandit -r $(SRC) -ll -ii
 
 security-deps: ## Audit dependencies for CVEs
-	pip-audit --desc --format json -o pip-audit-report.json || true
-	pip-audit --desc
+	pip-audit --desc -r requirements.txt --format json -o pip-audit-report.json || true
+	pip-audit --desc -r requirements.txt
 
 security: security-code security-deps ## Run all security checks
 
-test: ## Run test suite with coverage
-	pytest tests/ -v --cov=$(SRC) --cov-report=term-missing --cov-report=xml --cov-fail-under=80
+test: ## Run test suite with coverage exactly as CI does
+	pytest tests/ -v --cov --cov-config=.coveragerc --cov-report=term-missing --cov-fail-under=95
 
 test-fast: ## Run tests without coverage
 	pytest tests/ -v -x
 
 test-parallel: ## Run tests in parallel
-	pytest tests/ -v -n auto --cov=$(SRC)
+	pytest tests/ -v -n auto --cov --cov-config=.coveragerc
 
 docker-build: ## Build production image
 	docker build --target production -t $(IMAGE_NAME):latest .
 
-docker-run: ## Run container locally
-	docker run --rm -p 8080:8080 $(IMAGE_NAME):latest
+docker-run: ## Run container locally (APP_ENV=development: no API key needed)
+	docker run --rm -p $(PORT):8000 -e APP_ENV=development $(IMAGE_NAME):latest
 
 docker-scan: ## Scan image for CVEs (strict — fail on HIGH/CRITICAL)
 	docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \

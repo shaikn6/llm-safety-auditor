@@ -1,0 +1,15 @@
+# Development override: live reload with the source tree bind-mounted.
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+services:
+  api:
+    volumes:
+      - .:/app
+      - audit_data:/app/data
+    environment:
+      - APP_ENV=development
+      - ENABLE_DOCS=1
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+
+  dashboard:
+    volumes:
+      - .:/app
