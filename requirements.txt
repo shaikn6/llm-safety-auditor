@@ -2,7 +2,7 @@ fastapi>=0.143.0
 uvicorn[standard]>=0.54.0
 slowapi>=0.1.10
 sqlalchemy>=2.1.4
-pydantic>=2.13.5
+pydantic>=2.14.1
 
 # Semantic detection (falls back to TF-IDF if not installed)
 sentence-transformers>=6.1.0
