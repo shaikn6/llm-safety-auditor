@@ -238,3 +238,12 @@ def test_concurrent_duplicate_insert_returns_409(client, monkeypatch):
     monkeypatch.setattr(api_main, "_persist_session", racing_persist)
     resp = client.post("/audit/run", json={"session_id": "hardening-race", "limit": 1})
     assert resp.status_code == 409
+
+
+def test_audit_run_include_mutations_runs_the_mutated_corpus(client):
+    default = client.post("/audit/run", json={})
+    mutated = client.post("/audit/run", json={"include_mutations": True})
+    assert default.status_code == 200
+    assert mutated.status_code == 200
+    assert default.json()["total_attacks"] == 50
+    assert mutated.json()["total_attacks"] == 350

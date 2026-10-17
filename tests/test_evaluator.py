@@ -265,3 +265,59 @@ class TestRecommendations:
         assert (
             "red-teaming" in recs.lower() or "CI/CD" in recs or "audit" in recs.lower()
         )
+
+
+# ---------------------------------------------------------------------------
+# Mutation engine wiring (include_mutations)
+# ---------------------------------------------------------------------------
+
+
+class TestIncludeMutations:
+    def test_default_runs_only_the_curated_seeds(self, evaluator):
+        assert evaluator.run().total_attacks == 50
+
+    def test_include_mutations_runs_seeds_plus_six_variants_each(self, evaluator):
+        report = evaluator.run(include_mutations=True)
+        assert report.total_attacks == 50 * 7  # 350
+
+    def test_seeds_come_first_and_variants_are_tagged_and_distinct(self, evaluator):
+        attacks = [
+            r.attack for r in evaluator.run(include_mutations=True).attack_results
+        ]
+        seeds, variants = attacks[:50], attacks[50:]
+        assert all("~m" not in a.id for a in seeds)
+        assert all(a.id.split("~m")[0] and "~m" in a.id for a in variants)
+        assert len({a.id for a in attacks}) == len(attacks)
+        assert max(len(a.id) for a in attacks) <= 16  # attack_id column width
+        strategies = {t for a in variants for t in a.tags if t.startswith("mutation:")}
+        assert len(strategies) == 6
+
+    def test_variants_keep_category_and_severity_of_their_seed(self, evaluator):
+        from auditor.attack_library import get_attack_by_id
+
+        for r in evaluator.run(include_mutations=True).attack_results[50:]:
+            seed = get_attack_by_id(r.attack.id.split("~m")[0])
+            assert r.attack.category == seed.category
+            assert r.attack.severity == seed.severity
+            assert r.attack.template
+
+    def test_filters_apply_before_expansion(self, evaluator):
+        report = evaluator.run(
+            categories=[AttackCategory.JAILBREAK], include_mutations=True
+        )
+        assert report.total_attacks == 10 * 7
+
+    def test_limit_keeps_seeds_before_variants(self, evaluator):
+        report = evaluator.run(limit=60, include_mutations=True)
+        ids = [r.attack.id for r in report.attack_results]
+        assert len(ids) == 60
+        assert all("~m" not in i for i in ids[:50])
+        assert all("~m" in i for i in ids[50:])
+
+    def test_pool_is_bounded_by_the_hard_ceiling(self, evaluator):
+        # A huge explicit limit with mutations must not exceed _MAX_POOL_SIZE
+        # (an authenticated, rate-limited run stays bounded).
+        from auditor.evaluator import _MAX_POOL_SIZE
+
+        report = evaluator.run(limit=100000, include_mutations=True)
+        assert len(report.attack_results) <= _MAX_POOL_SIZE
