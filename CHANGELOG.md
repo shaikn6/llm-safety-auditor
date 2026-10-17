@@ -12,6 +12,7 @@ All notable changes to this project are documented here.
 - `make docker-build` targeted a stage that did not exist; `make docker-run` mapped the wrong port; `make lint` / `make test` now run the same commands as CI
 
 ### Added
+- `include_mutations` option on `SafetyEvaluator.run` and `POST /audit/run`: runs the mutation engine's variants of each selected seed (6 per seed) in addition to the seeds, 350 attacks for the full library. Off by default, so an audit still runs the 50 curated seeds. The engine was previously not used by the audit path
 - `auditor/providers.py`: provider adapters selected by `LLM_PROVIDER` (`mock` default, `anthropic`, `openai`-compatible), used by `/audit/run`. Tested with fake clients only
 - Optional API-key auth (`API_KEYS`, `X-API-Key`) on `POST` routes, mandatory when `APP_ENV` is not a development value
 - `attack_category` field on `POST /detect`
@@ -19,6 +20,7 @@ All notable changes to this project are documented here.
 - `.dockerignore` and `docker-compose.dev.yml` (live-reload override)
 
 ### Changed
+- README no longer claims "250+ attacks" for a default audit: 50 curated seeds by default, 350 with `include_mutations`
 - Dockerfile is multi-stage with a `production` target, non-root user and `HEALTHCHECK`; only application packages are copied
 - Default compose service no longer bind-mounts the source tree or runs with `--reload`
 - `.env.example` lists only variables the code reads

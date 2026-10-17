@@ -12,7 +12,9 @@ Orchestrates the full red-teaming loop:
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
+
+from src.mutation_engine import AttackMutationEngine
 
 from .attack_library import (
     ALL_ATTACKS,
@@ -27,6 +29,12 @@ from .providers import LLMProvider
 # ---------------------------------------------------------------------------
 # Data structures
 # ---------------------------------------------------------------------------
+
+
+# Hard ceiling on attacks run in one audit, independent of `limit`. The full
+# mutated corpus is 350 (50 seeds x 6 strategies + seeds); this bounds any
+# single run so include_mutations cannot amplify into an unbounded provider bill.
+_MAX_POOL_SIZE = 400
 
 
 @dataclass
@@ -144,6 +152,7 @@ class SafetyEvaluator:
         categories: list[AttackCategory] | None = None,
         severities: list[Severity] | None = None,
         limit: int | None = None,
+        include_mutations: bool = False,
     ) -> AuditReport:
         """
         Execute a full audit run.
@@ -153,8 +162,11 @@ class SafetyEvaluator:
         categories  : filter by category (default: all)
         severities  : filter by severity (default: all)
         limit       : cap the number of attacks (default: all matching)
+        include_mutations : also run the mutation engine's variants of every
+                      selected seed (6 per seed, one per strategy). Off by
+                      default, so an audit runs the curated seeds only.
         """
-        attacks = self._select_attacks(categories, severities, limit)
+        attacks = self._select_attacks(categories, severities, limit, include_mutations)
         results = self._run_attacks(attacks)
         return self._build_report(results)
 
@@ -167,6 +179,7 @@ class SafetyEvaluator:
         categories: list[AttackCategory] | None,
         severities: list[Severity] | None,
         limit: int | None,
+        include_mutations: bool = False,
     ) -> list[AttackPrompt]:
         pool = ALL_ATTACKS[:]
 
@@ -176,10 +189,35 @@ class SafetyEvaluator:
         if severities:
             pool = [a for a in pool if a.severity in severities]
 
+        if include_mutations:
+            # Seeds first, then variants, so `limit` still keeps the curated
+            # seeds before any generated ones.
+            pool = pool + self._mutate(pool)
+
         if limit is not None:
             pool = pool[:limit]
 
-        return pool
+        return pool[:_MAX_POOL_SIZE]
+
+    @staticmethod
+    def _mutate(seeds: list[AttackPrompt]) -> list[AttackPrompt]:
+        """One variant per seed per strategy, inheriting category and severity.
+
+        Ids are "<seed id>~m<n>" (n = 1-based strategy index): short enough for
+        the attack_id column (String(16)) and distinct, so the seeded mock LLM
+        draws independently per variant. The strategy name goes in the tags.
+        """
+        engine = AttackMutationEngine([a.template for a in seeds])
+        return [
+            replace(
+                seed,
+                id=f"{seed.id}~m{n}",
+                template=engine.mutate(template, strategy),
+                tags=[*seed.tags, f"mutation:{strategy}"],
+            )
+            for seed, template in zip(seeds, engine.seeds, strict=True)
+            for n, strategy in enumerate(engine.ALL_STRATEGIES, start=1)
+        ]
 
     def _run_attacks(self, attacks: list[AttackPrompt]) -> list[AttackResult]:
         results: list[AttackResult] = []

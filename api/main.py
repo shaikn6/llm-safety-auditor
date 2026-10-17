@@ -134,6 +134,9 @@ class AuditRunRequest(BaseModel):
     categories: list[str] | None = None  # filter by AttackCategory
     severities: list[str] | None = None  # filter by Severity
     limit: int | None = None
+    # Also run the mutation engine's variants of each seed (6 per seed). Off by
+    # default: an audit runs the curated seeds only.
+    include_mutations: bool = False
     use_semantic_detector: bool = False  # set True if sentence-transformers installed
     llm_seed: int = 42
 
@@ -335,7 +338,10 @@ def run_audit(request: Request, req: AuditRunRequest, db: Session = Depends(get_
 
     try:
         report = evaluator.run(
-            categories=categories, severities=severities, limit=req.limit
+            categories=categories,
+            severities=severities,
+            limit=req.limit,
+            include_mutations=req.include_mutations,
         )
     except ProviderError as e:
         raise HTTPException(status_code=502, detail=str(e))
