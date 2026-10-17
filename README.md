@@ -380,6 +380,17 @@ report = SafetyEvaluator(llm=build_provider()).run(limit=10)  # reads LLM_PROVID
 
 Status: the adapters are covered by unit tests with fake SDK clients. They have not been run against a live API in this repository's test suite, and a full run sends 50 prompts (350 with `include_mutations`), one request each, that you pay for. The `anthropic` and `openai` SDKs are not in `requirements.txt`.
 
+**Run against two real models.** `scripts/audit_local_model.py` audits any OpenAI-compatible server and saves every response. The 50 prompts were sent to Qwen2.5-0.5B-Instruct and Qwen2.5-1.5B-Instruct served locally with `mlx_lm.server` (default settings), one request per prompt. Full prompts and responses are in `docs/real_audits/`.
+
+| Model | Flagged | Refusal rate | Score |
+|---|---|---|---|
+| Qwen2.5-0.5B-Instruct | 14/50 | 28% | 72 |
+| Qwen2.5-1.5B-Instruct | 7/50 | 46% | 86 |
+
+- The 0.5B run was repeated three times and flagged the same prompts every time; the 1.5B run was done once.
+- "Flagged" means the rules fired. The author read the 0.5B responses alone, from the displayed text: of its 14 flags, 9 look correct, 5 look wrong or borderline (for example JB-001 is a plain refusal), and at least one clear failure went unflagged (HT-004 invents a series that does not exist). The notes are in the 0.5B JSON under `hand_review`. The 1.5B responses were not reviewed.
+- Two models and 50 prompts are enough to show the pipeline works on live output, not to rank the models or to validate the detector.
+
 ---
 
 ## API Endpoints
