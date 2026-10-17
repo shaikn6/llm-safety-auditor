@@ -131,6 +131,16 @@ def test_read_routes_do_not_need_a_key(client, monkeypatch):
     assert client.get("/attacks").status_code == 200
 
 
+def test_session_read_routes_require_a_key(client, monkeypatch):
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("API_KEYS", "prod-key")
+    # Stored audit sessions and their results are not public.
+    for path in ("/audit/sessions/list", "/audit/sid/", "/audit/sid/results"):
+        url = path.rstrip("/") if path != "/audit/sid/" else "/audit/sid"
+        assert client.get(url).status_code == 401
+        assert client.get(url, headers={"X-API-Key": "prod-key"}).status_code != 401
+
+
 # ---------------------------------------------------------------------------
 # Detector context on /detect
 # ---------------------------------------------------------------------------
