@@ -373,7 +373,7 @@ def run_audit(request: Request, req: AuditRunRequest, db: Session = Depends(get_
     )
 
 
-@app.get("/audit/sessions/list")
+@app.get("/audit/sessions/list", dependencies=[Depends(require_api_key)])
 def list_sessions(db: Session = Depends(get_db)):  # noqa: B008
     """List all audit sessions."""
     sessions = db.query(DBAuditSession).order_by(DBAuditSession.created_at.desc()).all()
@@ -390,7 +390,11 @@ def list_sessions(db: Session = Depends(get_db)):  # noqa: B008
     ]
 
 
-@app.get("/audit/{session_id}", response_model=SessionSummaryOut)
+@app.get(
+    "/audit/{session_id}",
+    response_model=SessionSummaryOut,
+    dependencies=[Depends(require_api_key)],
+)
 def get_session(session_id: str, db: Session = Depends(get_db)):  # noqa: B008
     """Retrieve audit session summary by ID."""
     session = (
@@ -416,7 +420,11 @@ def get_session(session_id: str, db: Session = Depends(get_db)):  # noqa: B008
     )
 
 
-@app.get("/audit/{session_id}/results", response_model=list[AttackResultOut])
+@app.get(
+    "/audit/{session_id}/results",
+    response_model=list[AttackResultOut],
+    dependencies=[Depends(require_api_key)],
+)
 def get_session_results(
     session_id: str,
     category: str | None = Query(None),
