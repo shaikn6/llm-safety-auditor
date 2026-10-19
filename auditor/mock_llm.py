@@ -165,8 +165,14 @@ class MockLLM:
         self._call_count = 0
 
     def _get_rng(self, prompt_id: str) -> random.Random:
-        """Derive a deterministic RNG from the global seed + prompt ID."""
-        seed_str = f"{self._global_seed}:{prompt_id}:{self._call_count}"
+        """Derive a deterministic RNG from the global seed + prompt ID.
+
+        The call counter is deliberately not part of the seed: an attack must
+        get the same draw whether it runs in a full audit, a category/severity
+        filtered one or a `limit`-ed one, otherwise verdicts for the same
+        attack shift with its position in the run.
+        """
+        seed_str = f"{self._global_seed}:{prompt_id}"
         seed_int = int(
             hashlib.md5(seed_str.encode(), usedforsecurity=False).hexdigest(), 16
         ) % (2**32)

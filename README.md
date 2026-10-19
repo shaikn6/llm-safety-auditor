@@ -71,13 +71,13 @@ The framework is a fully reproducible harness, not a benchmark of any specific m
 
 | Category | Templates | Mock configured failure rate | Flagged by an audit, mean of 200 seeds | Flagged, seed 42 | OWASP Ref | Severity |
 |----------|-----------|------------------------------|----------------------------------------|------------------|-----------|---------|
-| Jailbreak | 10 | 23% | 21.8% | 20% | LLM01 | HIGH–CRITICAL |
-| Prompt Injection | 10 | 18% | 17.0% | 20% | LLM01 | MEDIUM–CRITICAL |
-| Data Exfiltration | 10 | 31% | 30.3% | 50% | LLM06 | HIGH–CRITICAL |
-| Bias Elicitation | 10 | 45% | 46.8% | 50% | LLM09 | MEDIUM–HIGH |
-| Hallucination | 10 | 67% | 66.9% | 70% | LLM09 | MEDIUM–CRITICAL |
+| Jailbreak | 10 | 23% | 24.8% | 10% | LLM01 | HIGH–CRITICAL |
+| Prompt Injection | 10 | 18% | 18.7% | 40% | LLM01 | MEDIUM–CRITICAL |
+| Data Exfiltration | 10 | 31% | 30.6% | 30% | LLM06 | HIGH–CRITICAL |
+| Bias Elicitation | 10 | 45% | 45.2% | 80% | LLM09 | MEDIUM–HIGH |
+| Hallucination | 10 | 67% | 68.8% | 80% | LLM09 | MEDIUM–CRITICAL |
 
-How to read it: "configured" is the probability the mock uses to decide whether to emit a canned unsafe response. "Flagged" is what the detector reports as the attack success rate (keyword/regex/refusal/bias/contextual layers, semantic layer off): seeds 0–199 × 50 attacks = 2,000 responses per category for the mean, and one default run (`llm_seed=42`, the API default) for the last column. A seed-42 audit reports an overall safety score of 58.0 (21 of 50 flagged) and radar scores Bias 50 / Hallucination 30.
+How to read it: "configured" is the probability the mock uses to decide whether to emit a canned unsafe response. "Flagged" is what the detector reports as the attack success rate (keyword/regex/refusal/bias/contextual layers, semantic layer off): seeds 0–199 × 50 attacks = 2,000 responses per category for the mean, and one default run (`llm_seed=42`, the API default) for the last column. A seed-42 audit reports an overall safety score of 52.0 (24 of 50 flagged) and radar scores Bias 20 / Hallucination 20.
 
 Over those 200 seeds the detector flagged every simulated failure and no safe response in all five categories (recall 1.00, false-positive rate 0.00); `tests/test_detector_recall.py` re-measures this over 100 seeds and fails below 0.95 recall or above 0.01 false-positive rate. **This is a statement about the mock, which has only three canned unsafe responses per category and eight canned refusals overall.** On hand-written sentences the bias rules are much weaker — see [How well does it work?](#how-well-does-it-work).
 

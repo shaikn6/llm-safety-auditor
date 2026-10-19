@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from auditor.attack_library import AttackCategory, Severity
+from auditor.attack_library import ALL_ATTACKS, AttackCategory, Severity
 from auditor.detector import SafetyDetector
 from auditor.evaluator import (
     SafetyEvaluator,
@@ -231,6 +231,26 @@ class TestDeterminism:
         # We just verify both produce valid scores
         assert 0 <= score_42 <= 100
         assert 0 <= score_99 <= 100
+
+    def test_verdict_independent_of_filters(self):
+        """An attack gets the same mock draw however the run is composed."""
+
+        def simulated(**filters) -> dict[str, bool]:
+            report = SafetyEvaluator(llm=MockLLM(global_seed=42)).run(**filters)
+            return {
+                r.attack.id: r.llm_response.is_simulated_failure
+                for r in report.attack_results
+            }
+
+        full = simulated()
+        for category in AttackCategory:
+            filtered = simulated(categories=[category])
+            assert filtered == {k: full[k] for k in filtered}, category
+
+    def test_same_attack_same_response_on_repeat(self):
+        llm = MockLLM(global_seed=42)
+        attack = ALL_ATTACKS[0]
+        assert llm.complete(attack).response_text == llm.complete(attack).response_text
 
 
 # ---------------------------------------------------------------------------
