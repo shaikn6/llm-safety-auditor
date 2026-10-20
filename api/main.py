@@ -206,6 +206,7 @@ class SessionSummaryOut(BaseModel):
     safety_dimensions: dict
     recommendations: list
     owasp_compliance: list
+    errored_attacks: int = 0  # provider call failed; not in total_attacks
 
 
 class AttackResultOut(BaseModel):
@@ -213,9 +214,11 @@ class AttackResultOut(BaseModel):
     category: str
     severity: str
     owasp_ref: str
-    is_safe: bool
-    safety_score: float
-    confidence: float
+    status: str  # "safe", "unsafe" or "error" (provider call failed)
+    is_safe: bool | None  # None when status is "error": not scored
+    safety_score: float | None
+    confidence: float | None
+    error: str | None = None
     refusal_detected: bool
     detection_category: str | None
     triggered_rules: list
@@ -225,6 +228,11 @@ class AttackResultOut(BaseModel):
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+# detection_category marking a stored attack whose provider call failed. Kept
+# in the existing column so stored databases need no migration.
+_PROVIDER_ERROR = "provider_error"
 
 
 def _persist_session(db: Session, report) -> DBAuditSession:
@@ -272,6 +280,23 @@ def _persist_session(db: Session, report) -> DBAuditSession:
         )
         row.triggered_rules = r.detection.triggered_rules
         db.add(row)
+
+    for e in report.errors:
+        # is_safe=True keeps errored rows out of unsafe_only; the API reports
+        # them as status "error" with is_safe None.
+        db.add(
+            DBAttackResult(
+                session_id=report.session_id,
+                attack_id=e.attack.id,
+                category=e.attack.category.value,
+                severity=e.attack.severity.value,
+                owasp_ref=e.attack.owasp_ref,
+                response_text=e.error,
+                is_safe=True,
+                detection_category=_PROVIDER_ERROR,
+                elapsed_ms=e.elapsed_ms,
+            )
+        )
 
     db.commit()
     db.refresh(session_row)
@@ -367,6 +392,7 @@ def run_audit(request: Request, req: AuditRunRequest, db: Session = Depends(get_
         elapsed_total_ms=report.elapsed_total_ms,
         safety_dimensions=report.safety_dimensions,
         recommendations=report.recommendations,
+        errored_attacks=len(report.errors),
         owasp_compliance=[
             {
                 "owasp_id": o.owasp_id,
@@ -423,6 +449,12 @@ def get_session(session_id: str, db: Session = Depends(get_db)):  # noqa: B008
         safety_dimensions=session.safety_dimensions,
         recommendations=session.recommendations,
         owasp_compliance=session.owasp_compliance,
+        errored_attacks=db.query(DBAttackResult)
+        .filter(
+            DBAttackResult.session_id == session_id,
+            DBAttackResult.detection_category == _PROVIDER_ERROR,
+        )
+        .count(),
     )
 
 
@@ -444,23 +476,26 @@ def get_session_results(
     if unsafe_only:
         q = q.filter(DBAttackResult.is_safe == False)
 
-    rows = q.all()
-    return [
-        AttackResultOut(
-            attack_id=r.attack_id,
-            category=r.category,
-            severity=r.severity,
-            owasp_ref=r.owasp_ref,
-            is_safe=r.is_safe,
-            safety_score=r.safety_score,
-            confidence=r.confidence,
-            refusal_detected=r.refusal_detected,
-            detection_category=r.detection_category,
-            triggered_rules=r.triggered_rules,
-            elapsed_ms=r.elapsed_ms,
-        )
-        for r in rows
-    ]
+    return [_result_out(r) for r in q.all()]
+
+
+def _result_out(r: DBAttackResult) -> AttackResultOut:
+    errored = r.detection_category == _PROVIDER_ERROR
+    return AttackResultOut(
+        attack_id=r.attack_id,
+        category=r.category,
+        severity=r.severity,
+        owasp_ref=r.owasp_ref,
+        status="error" if errored else ("safe" if r.is_safe else "unsafe"),
+        is_safe=None if errored else r.is_safe,
+        safety_score=None if errored else r.safety_score,
+        confidence=None if errored else r.confidence,
+        error=r.response_text if errored else None,
+        refusal_detected=r.refusal_detected,
+        detection_category=r.detection_category,
+        triggered_rules=r.triggered_rules,
+        elapsed_ms=r.elapsed_ms,
+    )
 
 
 @app.get("/attacks", response_model=list[AttackPromptOut])

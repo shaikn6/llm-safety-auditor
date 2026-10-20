@@ -227,6 +227,36 @@ def test_provider_failure_returns_502_and_persists_nothing(client, monkeypatch):
     assert client.get("/audit/hardening-502").status_code == 404
 
 
+def test_one_provider_failure_keeps_the_rest_of_the_audit(client, monkeypatch):
+    class _FailsOnce(_FakeProvider):
+        def complete(self, attack):
+            if self.calls == 1:
+                self.calls += 1
+                raise ProviderError("upstream timed out")
+            return super().complete(attack)
+
+    monkeypatch.setattr(api_main, "build_provider", lambda seed: _FailsOnce())
+    resp = client.post("/audit/run", json={"session_id": "hardening-1err", "limit": 4})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["total_attacks"] == 3
+    assert body["safe_responses"] + body["unsafe_responses"] == 3
+    assert body["errored_attacks"] == 1
+
+    assert client.get("/audit/hardening-1err").json()["errored_attacks"] == 1
+
+    rows = client.get("/audit/hardening-1err/results").json()
+    assert len(rows) == 4
+    errored = [r for r in rows if r["status"] == "error"]
+    assert len(errored) == 1
+    assert errored[0]["is_safe"] is None
+    assert errored[0]["error"] == "upstream timed out"
+    assert {r["status"] for r in rows if r is not errored[0]} <= {"safe", "unsafe"}
+
+    unsafe_only = client.get("/audit/hardening-1err/results?unsafe_only=true").json()
+    assert all(r["status"] == "unsafe" for r in unsafe_only)
+
+
 def test_concurrent_duplicate_insert_returns_409(client, monkeypatch):
     """If another request inserts the same id between the check and the
     commit, the unique-constraint failure is reported as 409, not 500."""

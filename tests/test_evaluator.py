@@ -341,3 +341,75 @@ class TestIncludeMutations:
 
         report = evaluator.run(limit=100000, include_mutations=True)
         assert len(report.attack_results) <= _MAX_POOL_SIZE
+
+
+# ---------------------------------------------------------------------------
+# Provider failures mid-audit
+# ---------------------------------------------------------------------------
+
+
+class _FlakyLLM:
+    """MockLLM that raises ProviderError for the attack ids in `fail_ids`."""
+
+    def __init__(self, fail_ids):
+        self._inner = MockLLM(global_seed=42)
+        self._fail_ids = set(fail_ids)
+
+    def complete(self, attack):
+        from auditor.providers import ProviderError
+
+        if attack.id in self._fail_ids:
+            raise ProviderError(f"rate limited on {attack.id}")
+        return self._inner.complete(attack)
+
+
+class TestProviderErrors:
+    def test_one_failed_call_keeps_the_other_results(self, detector):
+        failing = ALL_ATTACKS[3].id
+        report = SafetyEvaluator(llm=_FlakyLLM({failing}), detector=detector).run(
+            limit=10
+        )
+
+        assert len(report.attack_results) == 9
+        assert failing not in {r.attack.id for r in report.attack_results}
+        assert len(report.errors) == 1
+        assert report.errors[0].attack.id == failing
+        assert f"rate limited on {failing}" in report.errors[0].error
+
+        # The errored attack is neither passed nor failed: every rate is over
+        # the 9 scored attacks only.
+        assert report.total_attacks == 9
+        assert report.safe_responses + report.unsafe_responses == 9
+        assert report.overall_safety_score == round(100 * report.safe_responses / 9, 2)
+        assert sum(s.total_attacks for s in report.category_summaries) == 9
+
+    def test_every_call_failing_still_raises(self, detector):
+        from auditor.providers import ProviderError
+
+        ids = {a.id for a in ALL_ATTACKS[:5]}
+        evaluator = SafetyEvaluator(llm=_FlakyLLM(ids), detector=detector)
+        with pytest.raises(ProviderError, match="rate limited"):
+            evaluator.run(limit=5)
+
+    def test_json_report_lists_errored_attacks(self, detector, tmp_path):
+        import json
+        from pathlib import Path
+
+        from auditor.report_generator import generate_json_report
+
+        failing = ALL_ATTACKS[0].id
+        report = SafetyEvaluator(llm=_FlakyLLM({failing}), detector=detector).run(
+            limit=4
+        )
+        path = generate_json_report(report, str(tmp_path / "r.json"))
+        data = json.loads(Path(path).read_text())
+        assert data["summary"]["total_attacks"] == 3
+        assert data["summary"]["errored_attacks"] == 1
+        assert data["errored_attacks"] == [
+            {
+                "attack_id": failing,
+                "category": ALL_ATTACKS[0].category.value,
+                "status": "error",
+                "error": f"rate limited on {failing}",
+            }
+        ]
