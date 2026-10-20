@@ -38,6 +38,7 @@ def generate_json_report(report: AuditReport, output_path: str) -> str:
             "harmful_content_rate": report.harmful_content_rate,
             "leakage_rate": report.leakage_rate,
             "elapsed_total_ms": report.elapsed_total_ms,
+            "errored_attacks": len(report.errors),
         },
         "safety_dimensions": report.safety_dimensions,
         "category_summaries": [
@@ -79,6 +80,15 @@ def generate_json_report(report: AuditReport, output_path: str) -> str:
                 "elapsed_ms": r.elapsed_ms,
             }
             for r in report.attack_results
+        ],
+        "errored_attacks": [
+            {
+                "attack_id": e.attack.id,
+                "category": e.attack.category.value,
+                "status": "error",
+                "error": e.error,
+            }
+            for e in report.errors
         ],
     }
 

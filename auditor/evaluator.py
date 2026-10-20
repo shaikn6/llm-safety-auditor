@@ -24,7 +24,7 @@ from .attack_library import (
 )
 from .detector import DetectionResult, SafetyDetector
 from .mock_llm import LLMResponse, MockLLM
-from .providers import LLMProvider
+from .providers import LLMProvider, ProviderError
 
 # ---------------------------------------------------------------------------
 # Data structures
@@ -57,6 +57,16 @@ class AttackResult:
             if self.detection.is_safe
             else 1.0 - self.detection.confidence
         )
+
+
+@dataclass
+class AttackError:
+    """An attack whose provider call failed. It is not scored, so it counts
+    as neither passed nor failed."""
+
+    attack: AttackPrompt
+    error: str
+    elapsed_ms: int
 
 
 @dataclass
@@ -98,7 +108,7 @@ OWASP_LLM_TOP10 = [
 class AuditReport:
     session_id: str
     model_name: str
-    total_attacks: int
+    total_attacks: int  # attacks scored; errored attacks are in `errors`
     safe_responses: int
     unsafe_responses: int
     overall_safety_score: float  # 0–100
@@ -111,6 +121,7 @@ class AuditReport:
     recommendations: list[str]
     safety_dimensions: dict[str, float]  # 6-dim radar scores (0–100)
     elapsed_total_ms: int
+    errors: list[AttackError] = field(default_factory=list)
 
     @property
     def pass_rate(self) -> float:
@@ -167,8 +178,17 @@ class SafetyEvaluator:
                       default, so an audit runs the curated seeds only.
         """
         attacks = self._select_attacks(categories, severities, limit, include_mutations)
-        results = self._run_attacks(attacks)
-        return self._build_report(results)
+        results, errors = self._run_attacks(attacks)
+        if errors and not results:
+            # Nothing was scored (bad key, provider down): fail the audit
+            # rather than return an empty report.
+            raise ProviderError(
+                f"All {len(errors)} provider calls failed; first error: "
+                f"{errors[0].error}"
+            )
+        report = self._build_report(results)
+        report.errors = errors
+        return report
 
     # ------------------------------------------------------------------
     # Private helpers
@@ -219,11 +239,20 @@ class SafetyEvaluator:
             for n, strategy in enumerate(engine.ALL_STRATEGIES, start=1)
         ]
 
-    def _run_attacks(self, attacks: list[AttackPrompt]) -> list[AttackResult]:
+    def _run_attacks(
+        self, attacks: list[AttackPrompt]
+    ) -> tuple[list[AttackResult], list[AttackError]]:
         results: list[AttackResult] = []
+        errors: list[AttackError] = []
         for attack in attacks:
             t0 = time.perf_counter()
-            llm_response = self._llm.complete(attack)
+            try:
+                llm_response = self._llm.complete(attack)
+            except ProviderError as e:
+                # One failed call must not discard the calls already paid for.
+                elapsed = int((time.perf_counter() - t0) * 1000)
+                errors.append(AttackError(attack, str(e), elapsed))
+                continue
             detection = self._detector.analyze(
                 llm_response.response_text, attack_category=attack.category.value
             )
@@ -236,7 +265,7 @@ class SafetyEvaluator:
                     elapsed_ms=elapsed,
                 )
             )
-        return results
+        return results, errors
 
     def _build_report(self, results: list[AttackResult]) -> AuditReport:
         total = len(results)
