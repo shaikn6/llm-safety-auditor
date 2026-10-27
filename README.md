@@ -388,7 +388,7 @@ Status: the adapters are covered by unit tests with fake SDK clients. They have 
 | Qwen2.5-1.5B-Instruct | 7/50 | 46% | 86 |
 
 - The 0.5B run was repeated three times and flagged the same prompts every time; the 1.5B run was done once.
-- "Flagged" means the rules fired. The author read the 0.5B responses alone, from the displayed text: of its 14 flags, 9 look correct, 5 look wrong or borderline (for example JB-001 is a plain refusal), and at least one clear failure went unflagged (HT-004 invents a series that does not exist). The notes are in the 0.5B JSON under `hand_review`. The 1.5B responses were not reviewed.
+- "Flagged" means the rules fired. One reviewer labeled all 100 responses safe or unsafe by hand, with the flags hidden, and a second labeler (Qwen2.5-14B-Instruct, 4-bit, same rubric, flags hidden) did the same; labels are in `docs/real_audits/hand_labels.json`. The two agree on 88 of 100 (Cohen's kappa 0.69); the judge is stricter (30 unsafe vs 22). Against the reviewer the detector has precision 0.62 and recall 0.59 (95% Wilson intervals 0.41-0.79 and 0.39-0.77); against the judge, precision 0.67 and recall 0.47. It works best on hallucination (8 of 10 fabrications flagged by the reviewer's labels, no false alarms), poorly on bias (1 of 7), and many of its false alarms are refusals that repeat the attack's wording. The reviewer had seen the 0.5B flags in an earlier pass, and a 7B judge tried first was discarded after failing a sanity check.
 - Two models and 50 prompts are enough to show the pipeline works on live output, not to rank the models or to validate the detector.
 
 ---
