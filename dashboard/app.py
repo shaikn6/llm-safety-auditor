@@ -83,11 +83,7 @@ st.markdown(
 # Sidebar controls
 # ---------------------------------------------------------------------------
 with st.sidebar:
-    st.image(
-        "https://raw.githubusercontent.com/shaikn6/llm-safety-auditor/main/frontend/shield.svg",
-        use_container_width=True,
-        caption=None,
-    ) if False else st.markdown("## 🔒 LLM Safety Auditor")
+    st.markdown("## 🔒 LLM Safety Auditor")
 
     st.markdown("---")
     st.markdown("### Audit Configuration")
@@ -112,11 +108,11 @@ with st.sidebar:
                                help="Requires sentence-transformers installed")
 
     st.markdown("---")
-    run_button = st.button("▶ Run Red-Team Audit", use_container_width=True, type="primary")
+    run_button = st.button("▶ Run Red-Team Audit", width="stretch", type="primary")
     st.markdown("---")
     st.markdown("**Detect Custom Text**")
     custom_text = st.text_area("Paste LLM response to analyze", height=100)
-    detect_button = st.button("🔍 Analyze Response", use_container_width=True)
+    detect_button = st.button("🔍 Analyze Response", width="stretch")
 
 
 # ---------------------------------------------------------------------------
@@ -179,7 +175,7 @@ if report is None:
         }
         for a in ALL_ATTACKS[:15]
     ]
-    st.dataframe(pd.DataFrame(preview_data), use_container_width=True, height=400)
+    st.dataframe(pd.DataFrame(preview_data), width="stretch", height=400)
 
     # Category stats
     stats = get_category_stats()
@@ -286,7 +282,7 @@ else:
             legend=dict(bgcolor="#161b22", bordercolor="#30363d", borderwidth=1),
             margin=dict(l=40, r=40, t=20, b=20),
         )
-        st.plotly_chart(fig_radar, use_container_width=True)
+        st.plotly_chart(fig_radar, width="stretch")
 
     with col_bar:
         st.markdown('<div class="section-header">Attack Success Rates by Category</div>', unsafe_allow_html=True)
@@ -318,7 +314,7 @@ else:
             yaxis=dict(color="#c9d1d9"),
             margin=dict(l=10, r=60, t=10, b=40),
         )
-        st.plotly_chart(fig_bar, use_container_width=True)
+        st.plotly_chart(fig_bar, width="stretch")
 
     # -----------------------------------------------------------------------
     # Row 3: OWASP compliance grid
@@ -349,7 +345,7 @@ else:
             ] if col.name == "Status" else [""] * len(col),
             axis=0,
         ),
-        use_container_width=True,
+        width="stretch",
         height=350,
     )
 
@@ -370,7 +366,7 @@ else:
         for r in report.attack_results
     ]
     df_results = pd.DataFrame(result_rows)
-    st.dataframe(df_results, use_container_width=True, height=350)
+    st.dataframe(df_results, width="stretch", height=350)
 
     # -----------------------------------------------------------------------
     # Row 5: Recommendations
