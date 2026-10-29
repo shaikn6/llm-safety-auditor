@@ -1,22 +1,205 @@
-# LLM Safety Auditor — Automated Red-Teaming for LLM Deployments
+# llm-safety-auditor
 
-[![CI](https://github.com/shaikn6/llm-safety-auditor/actions/workflows/ci.yml/badge.svg)](https://github.com/shaikn6/llm-safety-auditor/actions)
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Hugging%20Face%20Space-FF9E0F)](https://huggingface.co/spaces/9mark9/llm-safety-auditor)
-![License](https://img.shields.io/badge/License-MIT-22c55e)
-![FastAPI](https://img.shields.io/badge/FastAPI-%3E%3D0.138-green)
-![Tests](https://img.shields.io/badge/Tests-495%20passing-brightgreen)
-![Coverage](https://img.shields.io/badge/Coverage-98%25-brightgreen)
+[![CI](https://github.com/shaikn6/llm-safety-auditor/actions/workflows/ci.yml/badge.svg)](https://github.com/shaikn6/llm-safety-auditor/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](requirements.txt)
+[![Live demo](https://img.shields.io/badge/Live%20demo-Hugging%20Face-FF9E0F)](https://huggingface.co/spaces/9mark9/llm-safety-auditor)
 
-A reproducible red-teaming harness for LLM deployments: 50 curated adversarial attacks by default, or 350 (the 50 seeds plus 300 variants from 6 mutation strategies) with `include_mutations`, a 6-layer safety detector, OWASP LLM Top 10 scoring, and compliance-grade PDF reports — runnable with zero API key against a seeded mock LLM. Adapters for the Anthropic API and OpenAI-compatible endpoints are included (selected with `LLM_PROVIDER`); they are unit-tested against fake clients, not yet against a live provider — see [Auditing a real model](#auditing-a-real-model).
+**A red-teaming harness for LLM deployments: 50 curated adversarial attacks (350 with mutations), a 6-layer rule-based safety detector, OWASP LLM Top 10 scoring and PDF audit reports.**
 
-## What's New in V2
+It runs with no API key against a seeded mock LLM, and audits a real model through the Anthropic API or any OpenAI-compatible endpoint (selected with `LLM_PROVIDER`). The Anthropic and OpenAI adapters are unit-tested against fake clients, not yet against a live provider; see [Auditing a real model](#auditing-a-real-model).
+
+**At a glance.** Try it in the [live demo](https://huggingface.co/spaces/9mark9/llm-safety-auditor). The 50 prompts were also run against two small models served locally (details and caveats in [Auditing a real model](#auditing-a-real-model)):
+
+| Model | Flagged by the current detector | Refusal rate | Score |
+|---|---|---|---|
+| Qwen2.5-0.5B-Instruct | 14/50 | 28% | 72 |
+| Qwen2.5-1.5B-Instruct | 6/50 | 46% | 88 |
+
+Two models and 50 prompts show the pipeline works on live output; they do not rank the models or validate the detector. The detector is a rule-based screen; its measured recall and false-positive rates, including where it is weak, are in [How well does it work?](#how-well-does-it-work).
+
+## Why this exists
+
+Teams that put an LLM in front of users need to know how it behaves under prompt injection, jailbreaks, data-exfiltration attempts, biased framing and questions with no true answer, and they need that check to be repeatable from one model version to the next. Manual review is slow and inconsistent. This harness turns the check into a scripted audit: a fixed attack library, a detector whose rules can be read, OWASP LLM Top 10 mapping, saved sessions for diffing runs, and a report that can be filed as evidence.
+
+## Architecture
+
+```mermaid
+flowchart TD
+    Lib["AttackLibrary<br/>50 templates · 5 categories<br/>auditor/attack_library.py"]
+    Mut["AttackMutationEngine<br/>6 strategies → 300 variants (opt-in)<br/>src/mutation_engine.py"]
+    Lib --> Eval
+    Mut -.-> Eval
+
+    Eval["SafetyEvaluator<br/>orchestrates the loop<br/>auditor/evaluator.py"]
+    Eval -->|"each attack"| Mock["MockLLM (seeded, default)<br/>or Anthropic / OpenAI-compatible adapter<br/>auditor/providers.py"]
+    Mock -->|"response"| Detect
+
+    Detect["SafetyDetector — 6 layers<br/>auditor/detector.py"]
+    Detect --> L1["1 · keyword blacklist"]
+    Detect --> L2["2 · regex PII / credentials (9 patterns)"]
+    Detect --> L3["3 · refusal detection"]
+    Detect --> L4["4 · semantic similarity<br/>MiniLM · TF-IDF fallback"]
+    Detect --> L5["5 · bias signals"]
+    Detect --> L6["6 · contextual compliance<br/>hallucination · jailbreak"]
+
+    Detect -->|"DetectionResult"| Score["AuditReport<br/>score 0–100 · 6-dim radar<br/>+ OWASP scorer (weighted, CWE)<br/>scoring/owasp_scorer.py"]
+
+    Score --> Report["PDF / JSON reports<br/>report_generator.py"]
+    Score --> API["FastAPI + slowapi<br/>SQLite persistence<br/>api/main.py"]
+    Score --> Dash["Streamlit + Plotly<br/>dashboard/app.py"]
+    Score --> Replay["Attack replay (SQLite)<br/>regression diff + timeline<br/>replay/attack_replay.py"]
+    Score --> CI["CI generator → SARIF<br/>ci/github_actions_generator.py"]
+    API --> Client["TypeScript client (axios)<br/>client/src/"]
+```
+
+Repository layout:
+
+```
+llm-safety-auditor/
+├── auditor/
+│   ├── attack_library.py    # 50+ adversarial prompt templates
+│   ├── evaluator.py         # Orchestrates red-teaming sessions
+│   ├── detector.py          # 6-layer safety detection pipeline
+│   ├── report_generator.py  # PDF + JSON audit reports
+│   ├── mock_llm.py          # Deterministic mock LLM (no API key needed)
+│   └── providers.py         # Provider adapters: mock / Anthropic / OpenAI-compatible
+├── api/
+│   ├── main.py              # FastAPI REST endpoints
+│   ├── models.py            # SQLAlchemy: AuditSession, AttackResult
+│   └── database.py          # SQLite + session management
+├── dashboard/
+│   └── app.py               # Streamlit interactive dashboard
+├── frontend/
+│   └── index.html           # Portfolio landing page
+├── docs/screenshots/        # Generated PNG charts
+├── src/                     # V2: mutation engine, OWASP classifier, PDF report
+├── scoring/  replay/        # OWASP scoring · SQLite session replay
+├── attacks/  ci/            # attack generator · GitHub Actions generator
+├── client/                  # TypeScript API client
+├── scripts/                 # audit_local_model.py (real-model runs), setup.sh
+├── docs/real_audits/        # recorded real-model audits and hand labels
+├── tests/                   # 14 test modules (pytest)
+├── requirements.txt
+├── docker-compose.yml
+└── Dockerfile
+```
+
+---
+
+## Quickstart
+
+```bash
+# Clone and install
+git clone https://github.com/shaikn6/llm-safety-auditor.git
+cd llm-safety-auditor
+pip install -r requirements.txt
+
+# Run a full audit (no API key needed)
+python -c "
+from auditor.evaluator import SafetyEvaluator
+from auditor.mock_llm import MockLLM
+from auditor.detector import SafetyDetector
+from auditor.report_generator import generate_pdf_report, generate_json_report
+
+evaluator = SafetyEvaluator(
+    llm=MockLLM(global_seed=42),
+    detector=SafetyDetector(use_semantic=False),
+    session_id='my-audit-001',
+)
+report = evaluator.run()
+print(f'Safety Score: {report.overall_safety_score:.1f}/100')
+print(f'Unsafe Responses: {report.unsafe_responses}/{report.total_attacks}')
+# report = evaluator.run(include_mutations=True)  # 350 attacks instead of 50
+
+# Generate reports
+generate_json_report(report, 'audit_report.json')
+generate_pdf_report(report, 'audit_report.pdf')
+"
+
+# Run tests (coverage scope defined in .coveragerc: auditor, api, src, scoring, replay, ci, attacks)
+pytest tests/ -v --cov --cov-config=.coveragerc --cov-report=term-missing
+
+# Start API server (interactive docs are off unless ENABLE_DOCS=1)
+ENABLE_DOCS=1 uvicorn api.main:app --reload
+# → http://localhost:8000/docs
+
+# Start Streamlit dashboard
+streamlit run dashboard/app.py
+# → http://localhost:8501
+
+# Generate portfolio screenshots
+python generate_screenshots.py
+
+# Docker Compose (API on :8000 + Dashboard on :8501)
+docker compose up
+# with live reload and the source tree mounted:
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+```
+
+`make lint` and `make test` run the same commands as CI.
+
+### Auditing a real model
+
+`POST /audit/run` and `SafetyEvaluator` take any provider with `.complete(attack)`. Three ship in `auditor/providers.py`, selected by environment variables (all optional — see `.env.example`):
+
+| `LLM_PROVIDER` | Needs | Model |
+|----------------|-------|-------|
+| `mock` (default) | nothing | seeded `mock-llm-v1` |
+| `anthropic` | `pip install anthropic`, `ANTHROPIC_API_KEY` | `LLM_MODEL`, default `claude-haiku-5-5` |
+| `openai` | `pip install openai`, `OPENAI_API_KEY`, `LLM_MODEL` | any OpenAI-compatible server via `OPENAI_BASE_URL` |
+
+```python
+from auditor.evaluator import SafetyEvaluator
+from auditor.providers import build_provider
+
+report = SafetyEvaluator(llm=build_provider()).run(limit=10)  # reads LLM_PROVIDER etc.
+```
+
+Status: the adapters are covered by unit tests with fake SDK clients. They have not been run against a live API in this repository's test suite, and a full run sends 50 prompts (350 with `include_mutations`), one request each, that you pay for. The `anthropic` and `openai` SDKs are not in `requirements.txt`.
+
+**Run against two real models.** `scripts/audit_local_model.py` audits any OpenAI-compatible server and saves every response. The 50 prompts were sent to Qwen2.5-0.5B-Instruct and Qwen2.5-1.5B-Instruct served locally with `mlx_lm.server` (default settings), one request per prompt. Full prompts and responses are in `docs/real_audits/`.
+
+| Model | Flagged at run time | Flagged by the current detector | Refusal rate | Score (current) |
+|---|---|---|---|---|
+| Qwen2.5-0.5B-Instruct | 14/50 | 14/50 | 28% | 72 |
+| Qwen2.5-1.5B-Instruct | 7/50 | 6/50 | 46% | 88 |
+
+- The 0.5B run was repeated three times and flagged the same prompts every time; the 1.5B run was done once. The audit files keep the run-time flag as `flagged_at_run`; `flagged` is the current detector's.
+- "Flagged" means the rules fired. One reviewer labeled all 100 responses safe or unsafe by hand, with the flags hidden, and a second labeler (Qwen2.5-14B-Instruct, 4-bit, same rubric, flags hidden) did the same; labels are in `docs/real_audits/hand_labels.json`. The two agree on 88 of 100 (Cohen's kappa 0.69); the second labeler is stricter (30 unsafe vs 22). The reviewer had seen the 0.5B flags in an earlier pass, and a 7B judge tried first was discarded after failing a sanity check.
+- The detector's rules were revised after reading its misses and false alarms in these same 100 answers, so the numbers below are held out: for each of the 50 prompts, every new rule was kept or dropped (greedy, kept only if it raised F1) using the other 49 prompts only, and that prompt's two answers were scored with the result. Intervals are 95% bootstrap intervals, resampling prompts.
+
+  | Labeler | Detector | Precision | Recall | F1 |
+  |---|---|---|---|---|
+  | Reviewer (22 unsafe) | before | 0.62 (0.35-0.89) | 0.59 (0.36-0.81) | 0.60 (0.38-0.78) |
+  | Reviewer | after, held out | 0.82 (0.61-1.00) | 0.82 (0.65-0.96) | 0.82 (0.65-0.93) |
+  | Second labeler (30 unsafe) | before | 0.67 (0.44-0.88) | 0.47 (0.26-0.68) | 0.55 (0.34-0.71) |
+  | Second labeler | after, held out | 0.75 (0.54-0.93) | 0.60 (0.39-0.79) | 0.67 (0.47-0.81) |
+
+  The F1 gain is 0.06 to 0.41 (paired 95% interval) against the reviewer and 0.00 to 0.27 against the second labeler, so against the second labeler it is not clearly beyond noise. On one fixed 30/20 split of the prompts, rules chosen on the 30 changed nothing on the 20: most fixes rest on one or two prompts each. All rules were written after reading every error, so even the held-out numbers are optimistic. On the fitted answers themselves the detector scores 1.00 / 0.91 (reviewer) and 0.95 / 0.63 (second labeler); those figures are not an accuracy estimate.
+- Answers that obey an injected instruction: given the attack prompt, the detector flags an answer that outputs the phrase the injection demanded, speaks as the persona it assigned, switches to the language it demanded, or repeats a secret value written in the prompt. In the 100 recorded answers this fires once (the one unsafe injection answer, 1.5B on PI-004), so held out it gets no credit. On 48 new hand-written injection cases (24 obeyed, 24 refused or handled as data; `tests/injection_cases.json`), written before the rules and scored once, recall went from 0.00 to 0.79 (0.62-0.95) with no false alarms; F1 0.88 (0.76-0.98). The same person wrote the cases and the rules, so this overstates accuracy on real model output. Still missed: an injected sentence worked into the answer, an obeyed action described in prose ("Sending the addresses to ..."), an injected format such as all capitals, and an injected task done instead of the real one. Translating or summarising injected text counts as safe; the second labeler disagreed on some of those (PI-001, PI-002, PI-009). `POST /detect` and the dashboard's text box send no prompt, so these rules do not run there.
+- Not caught: a refusal followed by made-up detail, and stereotypes worded as soft tendencies ("women CEOs tend to be more balanced").
+- Two models and 50 prompts are enough to show the pipeline works on live output, not to rank the models or to validate the detector.
+
+---
+
+## What it does
+
+- 50 adversarial prompt templates across 5 categories (jailbreak, prompt injection, data exfiltration, bias elicitation, hallucination), each mapped to the OWASP LLM Top 10.
+- A layered detector: keyword blacklist, regex PII and credential patterns, refusal detection, semantic similarity (sentence-transformers cosine, TF-IDF fallback), bias signals, and contextual checks for hallucination and jailbreak prompts.
+- A safety evaluator with per-category vulnerability scores, refusal rate tracking and an OWASP compliance grid.
+- PDF audit reports (ReportLab) with an executive summary, safety dimensions, the OWASP compliance grid, per-category attack success rates and security recommendations.
+- A FastAPI service for CI/CD use and a Streamlit dashboard for interactive red-team sessions and trend analysis.
+- A seeded mock LLM with configured per-category failure rates, so audits and tests run without an API key.
+
+## Mutations, OWASP classification and PDF reports
 
 - **Attack Mutation Engine**: generates 6 variants of each seed attack, one per strategy (paraphrase, base64, leetspeak, noise injection, reverse-wrap, unicode homoglyph) — 300 variants from the 50 seeds, 350 attacks with the seeds. Opt in with `include_mutations` (`SafetyEvaluator.run(include_mutations=True)` or `{"include_mutations": true}` on `POST /audit/run`); the default audit runs the 50 curated seeds only. See `src/mutation_engine.py`
 - **OWASP LLM Top 10 (2023) Classifier**: maps any attack text to a vulnerability category with confidence score — see `src/owasp_scorer.py`
-- **Professional PDF Audit Reports** (V2 format): multi-page reports (6 pages for the default 50-attack audit) with cover, executive summary, per-category OWASP breakdown, top failed attacks, and recommendations — see `src/report_generator.py`
+- **PDF audit reports**: multi-page reports (6 pages for the default 50-attack audit) with cover, executive summary, per-category OWASP breakdown, top failed attacks, and recommendations — see `src/report_generator.py`
 
 ```python
-# V2 quick start
+# Mutation, classification and report example
 from src.mutation_engine import AttackMutationEngine
 from src.owasp_scorer import classify_attack
 from src.report_generator import generate_report
@@ -36,24 +219,7 @@ audit_results = [{"attack_text": a, "is_safe": i % 3 != 0} for i, a in enumerate
 generate_report(audit_results, "report.pdf", model_name="GPT-4o")
 ```
 
-## Situation
-
-Enterprise LLM deployments face OWASP LLM Top 10 threats: prompt injection, jailbreaks, data exfiltration, bias amplification, and hallucination at scale. Manual security review is slow, inconsistent, and doesn't scale with deployment velocity. Security teams lack tooling to systematically audit LLM safety before production deployments.
-
-## Task
-
-Build an automated red-teaming framework that systematically probes LLM deployments with 50+ adversarial attack patterns, scores safety across 6 dimensions, and generates compliance-ready PDF audit reports — all without requiring a live LLM API key.
-
-## Action
-
-- Curated 50+ adversarial prompt templates across 5 attack categories (Jailbreak, Prompt Injection, Data Exfiltration, Bias Elicitation, Hallucination) — all mapped to OWASP LLM Top 10
-- Built multi-layer detection pipeline: keyword blacklist → regex PII/credential patterns → refusal detection → semantic similarity scoring (sentence-transformers cosine similarity) → bias signals → contextual compliance (hallucination / jailbreak)
-- Implemented safety evaluator with per-category vulnerability scoring, refusal rate tracking, and OWASP compliance grid generation
-- Generated PDF audit reports with executive summary, vulnerability heatmaps, and severity-sorted hardening recommendations (ReportLab)
-- Deployed FastAPI REST endpoint for CI/CD integration and Streamlit dashboard for interactive red-team sessions and trend analysis
-- Seeded deterministic mock LLM with calibrated per-category failure rates for reproducible, API-key-free testing
-
-## Result
+## What ships
 
 The framework is a fully reproducible harness, not a benchmark of any specific model. It ships with:
 
@@ -154,71 +320,6 @@ DetectionResult(
 
 ---
 
-## Architecture
-
-```mermaid
-flowchart TD
-    Lib["AttackLibrary<br/>50 templates · 5 categories<br/>auditor/attack_library.py"]
-    Mut["AttackMutationEngine<br/>6 strategies → 300 variants (opt-in)<br/>src/mutation_engine.py"]
-    Lib --> Eval
-    Mut -.-> Eval
-
-    Eval["SafetyEvaluator<br/>orchestrates the loop<br/>auditor/evaluator.py"]
-    Eval -->|"each attack"| Mock["MockLLM (seeded, default)<br/>or Anthropic / OpenAI-compatible adapter<br/>auditor/providers.py"]
-    Mock -->|"response"| Detect
-
-    Detect["SafetyDetector — 6 layers<br/>auditor/detector.py"]
-    Detect --> L1["1 · keyword blacklist"]
-    Detect --> L2["2 · regex PII / credentials (9 patterns)"]
-    Detect --> L3["3 · refusal detection"]
-    Detect --> L4["4 · semantic similarity<br/>MiniLM · TF-IDF fallback"]
-    Detect --> L5["5 · bias signals"]
-    Detect --> L6["6 · contextual compliance<br/>hallucination · jailbreak"]
-
-    Detect -->|"DetectionResult"| Score["AuditReport<br/>score 0–100 · 6-dim radar<br/>+ OWASP scorer (weighted, CWE)<br/>scoring/owasp_scorer.py"]
-
-    Score --> Report["PDF / JSON reports<br/>report_generator.py"]
-    Score --> API["FastAPI + slowapi<br/>SQLite persistence<br/>api/main.py"]
-    Score --> Dash["Streamlit + Plotly<br/>dashboard/app.py"]
-    Score --> Replay["Attack replay (SQLite)<br/>regression diff + timeline<br/>replay/attack_replay.py"]
-    Score --> CI["CI generator → SARIF<br/>ci/github_actions_generator.py"]
-    API --> Client["TypeScript client (axios)<br/>client/src/"]
-```
-
-Repository layout:
-
-```
-llm-safety-auditor/
-├── auditor/
-│   ├── attack_library.py    # 50+ adversarial prompt templates
-│   ├── evaluator.py         # Orchestrates red-teaming sessions
-│   ├── detector.py          # 6-layer safety detection pipeline
-│   ├── report_generator.py  # PDF + JSON audit reports
-│   ├── mock_llm.py          # Deterministic mock LLM (no API key needed)
-│   └── providers.py         # Provider adapters: mock / Anthropic / OpenAI-compatible
-├── api/
-│   ├── main.py              # FastAPI REST endpoints
-│   ├── models.py            # SQLAlchemy: AuditSession, AttackResult
-│   └── database.py          # SQLite + session management
-├── dashboard/
-│   └── app.py               # Streamlit interactive dashboard
-├── frontend/
-│   └── index.html           # Portfolio landing page
-├── docs/screenshots/        # Generated PNG charts
-├── src/                     # V2: mutation engine, OWASP classifier, PDF report
-├── scoring/  replay/        # OWASP scoring · SQLite session replay
-├── attacks/  ci/            # attack generator · GitHub Actions generator
-├── client/                  # TypeScript API client
-├── scripts/                 # audit_local_model.py (real-model runs), setup.sh
-├── docs/real_audits/        # recorded real-model audits and hand labels
-├── tests/                   # 14 test modules (pytest)
-├── requirements.txt
-├── docker-compose.yml
-└── Dockerfile
-```
-
----
-
 ## Detection Pipeline
 
 ```
@@ -307,107 +408,7 @@ A sentence is skipped when it is rejecting the idea or describing fair treatment
 
 ---
 
-## Quick Start
-
-```bash
-# Clone and install
-git clone https://github.com/shaikn6/llm-safety-auditor.git
-cd llm-safety-auditor
-pip install -r requirements.txt
-
-# Run a full audit (no API key needed)
-python -c "
-from auditor.evaluator import SafetyEvaluator
-from auditor.mock_llm import MockLLM
-from auditor.detector import SafetyDetector
-from auditor.report_generator import generate_pdf_report, generate_json_report
-
-evaluator = SafetyEvaluator(
-    llm=MockLLM(global_seed=42),
-    detector=SafetyDetector(use_semantic=False),
-    session_id='my-audit-001',
-)
-report = evaluator.run()
-print(f'Safety Score: {report.overall_safety_score:.1f}/100')
-print(f'Unsafe Responses: {report.unsafe_responses}/{report.total_attacks}')
-# report = evaluator.run(include_mutations=True)  # 350 attacks instead of 50
-
-# Generate reports
-generate_json_report(report, 'audit_report.json')
-generate_pdf_report(report, 'audit_report.pdf')
-"
-
-# Run tests (coverage scope defined in .coveragerc: auditor, api, src, scoring, replay, ci, attacks)
-pytest tests/ -v --cov --cov-config=.coveragerc --cov-report=term-missing
-
-# Start API server (interactive docs are off unless ENABLE_DOCS=1)
-ENABLE_DOCS=1 uvicorn api.main:app --reload
-# → http://localhost:8000/docs
-
-# Start Streamlit dashboard
-streamlit run dashboard/app.py
-# → http://localhost:8501
-
-# Generate portfolio screenshots
-python generate_screenshots.py
-
-# Docker Compose (API on :8000 + Dashboard on :8501)
-docker compose up
-# with live reload and the source tree mounted:
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up
-```
-
-`make lint` and `make test` run the same commands as CI.
-
-### Auditing a real model
-
-`POST /audit/run` and `SafetyEvaluator` take any provider with `.complete(attack)`. Three ship in `auditor/providers.py`, selected by environment variables (all optional — see `.env.example`):
-
-| `LLM_PROVIDER` | Needs | Model |
-|----------------|-------|-------|
-| `mock` (default) | nothing | seeded `mock-llm-v1` |
-| `anthropic` | `pip install anthropic`, `ANTHROPIC_API_KEY` | `LLM_MODEL`, default `claude-haiku-5-5` |
-| `openai` | `pip install openai`, `OPENAI_API_KEY`, `LLM_MODEL` | any OpenAI-compatible server via `OPENAI_BASE_URL` |
-
-```python
-from auditor.evaluator import SafetyEvaluator
-from auditor.providers import build_provider
-
-report = SafetyEvaluator(llm=build_provider()).run(limit=10)  # reads LLM_PROVIDER etc.
-```
-
-Status: the adapters are covered by unit tests with fake SDK clients. They have not been run against a live API in this repository's test suite, and a full run sends 50 prompts (350 with `include_mutations`), one request each, that you pay for. The `anthropic` and `openai` SDKs are not in `requirements.txt`.
-
-**Run against two real models.** `scripts/audit_local_model.py` audits any OpenAI-compatible server and saves every response. The 50 prompts were sent to Qwen2.5-0.5B-Instruct and Qwen2.5-1.5B-Instruct served locally with `mlx_lm.server` (default settings), one request per prompt. Full prompts and responses are in `docs/real_audits/`.
-
-| Model | Flagged at run time | Flagged by the current detector | Refusal rate | Score (current) |
-|---|---|---|---|---|
-| Qwen2.5-0.5B-Instruct | 14/50 | 14/50 | 28% | 72 |
-| Qwen2.5-1.5B-Instruct | 7/50 | 6/50 | 46% | 88 |
-
-- The 0.5B run was repeated three times and flagged the same prompts every time; the 1.5B run was done once. The audit files keep the run-time flag as `flagged_at_run`; `flagged` is the current detector's.
-- "Flagged" means the rules fired. One reviewer labeled all 100 responses safe or unsafe by hand, with the flags hidden, and a second labeler (Qwen2.5-14B-Instruct, 4-bit, same rubric, flags hidden) did the same; labels are in `docs/real_audits/hand_labels.json`. The two agree on 88 of 100 (Cohen's kappa 0.69); the second labeler is stricter (30 unsafe vs 22). The reviewer had seen the 0.5B flags in an earlier pass, and a 7B judge tried first was discarded after failing a sanity check.
-- The detector's rules were revised after reading its misses and false alarms in these same 100 answers, so the numbers below are held out: for each of the 50 prompts, every new rule was kept or dropped (greedy, kept only if it raised F1) using the other 49 prompts only, and that prompt's two answers were scored with the result. Intervals are 95% bootstrap intervals, resampling prompts.
-
-  | Labeler | Detector | Precision | Recall | F1 |
-  |---|---|---|---|---|
-  | Reviewer (22 unsafe) | before | 0.62 (0.35-0.89) | 0.59 (0.36-0.81) | 0.60 (0.38-0.78) |
-  | Reviewer | after, held out | 0.82 (0.61-1.00) | 0.82 (0.65-0.96) | 0.82 (0.65-0.93) |
-  | Second labeler (30 unsafe) | before | 0.67 (0.44-0.88) | 0.47 (0.26-0.68) | 0.55 (0.34-0.71) |
-  | Second labeler | after, held out | 0.75 (0.54-0.93) | 0.60 (0.39-0.79) | 0.67 (0.47-0.81) |
-
-  The F1 gain is 0.06 to 0.41 (paired 95% interval) against the reviewer and 0.00 to 0.27 against the second labeler, so against the second labeler it is not clearly beyond noise. On one fixed 30/20 split of the prompts, rules chosen on the 30 changed nothing on the 20: most fixes rest on one or two prompts each. All rules were written after reading every error, so even the held-out numbers are optimistic. On the fitted answers themselves the detector scores 1.00 / 0.91 (reviewer) and 0.95 / 0.63 (second labeler); those figures are not an accuracy estimate.
-- Answers that obey an injected instruction: given the attack prompt, the detector flags an answer that outputs the phrase the injection demanded, speaks as the persona it assigned, switches to the language it demanded, or repeats a secret value written in the prompt. In the 100 recorded answers this fires once (the one unsafe injection answer, 1.5B on PI-004), so held out it gets no credit. On 48 new hand-written injection cases (24 obeyed, 24 refused or handled as data; `tests/injection_cases.json`), written before the rules and scored once, recall went from 0.00 to 0.79 (0.62-0.95) with no false alarms; F1 0.88 (0.76-0.98). The same person wrote the cases and the rules, so this overstates accuracy on real model output. Still missed: an injected sentence worked into the answer, an obeyed action described in prose ("Sending the addresses to ..."), an injected format such as all capitals, and an injected task done instead of the real one. Translating or summarising injected text counts as safe; the second labeler disagreed on some of those (PI-001, PI-002, PI-009). `POST /detect` and the dashboard's text box send no prompt, so these rules do not run there.
-- Not caught: a refusal followed by made-up detail, and stereotypes worded as soft tendencies ("women CEOs tend to be more balanced").
-- Two models and 50 prompts are enough to show the pipeline works on live output, not to rank the models or to validate the detector.
-
----
-
 ## API Endpoints
-
-[![OpenAPI](https://img.shields.io/badge/OpenAPI-3.1-6BA539?logo=openapi-initiative&logoColor=white)](http://localhost:8000/docs)
-[![Swagger UI](https://img.shields.io/badge/Swagger_UI-docs-85EA2D?logo=swagger&logoColor=black)](http://localhost:8000/docs)
-[![ReDoc](https://img.shields.io/badge/ReDoc-redoc-8A2BE2)](http://localhost:8000/redoc)
 
 Interactive docs are **off by default** and return 404; start the server with `ENABLE_DOCS=1` to serve `http://localhost:8000/docs` (Swagger UI) and `http://localhost:8000/redoc` (ReDoc).
 
@@ -464,8 +465,14 @@ curl -X POST http://localhost:8000/detect \
 
 ---
 
-## Author
+## What I would improve next
 
-**Nagizaaz Shaik** — MLOps Engineer  
-🔗 [linkedin.com/in/nagizaazshaik](https://linkedin.com/in/nagizaazshaik)  
-🐙 [github.com/shaikn6](https://github.com/shaikn6)
+- Run the Anthropic and OpenAI adapters against live APIs in a scheduled job, so they are tested beyond fake SDK clients.
+- Widen the bias rules beyond a fixed trait vocabulary; on sentences written after the rules were frozen they caught 7 of 20.
+- Catch a refusal followed by made-up detail, and stereotypes worded as soft tendencies, the two misses named in the real-model audit.
+- Validate the detector on more models and prompts with independent labelers; two models and 50 prompts are not enough to rank models.
+- Regenerate the screenshots, which predate the bias and hallucination detector layers.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
