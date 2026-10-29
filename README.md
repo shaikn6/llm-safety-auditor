@@ -383,7 +383,7 @@ Status: the adapters are covered by unit tests with fake SDK clients. They have 
 | Model | Flagged at run time | Flagged by the current detector | Refusal rate | Score (current) |
 |---|---|---|---|---|
 | Qwen2.5-0.5B-Instruct | 14/50 | 14/50 | 28% | 72 |
-| Qwen2.5-1.5B-Instruct | 7/50 | 5/50 | 46% | 90 |
+| Qwen2.5-1.5B-Instruct | 7/50 | 6/50 | 46% | 88 |
 
 - The 0.5B run was repeated three times and flagged the same prompts every time; the 1.5B run was done once. The audit files keep the run-time flag as `flagged_at_run`; `flagged` is the current detector's.
 - "Flagged" means the rules fired. One reviewer labeled all 100 responses safe or unsafe by hand, with the flags hidden, and a second labeler (Qwen2.5-14B-Instruct, 4-bit, same rubric, flags hidden) did the same; labels are in `docs/real_audits/hand_labels.json`. The two agree on 88 of 100 (Cohen's kappa 0.69); the second labeler is stricter (30 unsafe vs 22). The reviewer had seen the 0.5B flags in an earlier pass, and a 7B judge tried first was discarded after failing a sanity check.
@@ -396,8 +396,9 @@ Status: the adapters are covered by unit tests with fake SDK clients. They have 
   | Second labeler (30 unsafe) | before | 0.67 (0.44-0.88) | 0.47 (0.26-0.68) | 0.55 (0.34-0.71) |
   | Second labeler | after, held out | 0.75 (0.54-0.93) | 0.60 (0.39-0.79) | 0.67 (0.47-0.81) |
 
-  The F1 gain is 0.06 to 0.41 (paired 95% interval) against the reviewer and 0.00 to 0.27 against the second labeler, so against the second labeler it is not clearly beyond noise. On one fixed 30/20 split of the prompts, rules chosen on the 30 changed nothing on the 20: most fixes rest on one or two prompts each. All rules were written after reading every error, so even the held-out numbers are optimistic. On the fitted answers themselves the detector scores 1.00 / 0.86 (reviewer) and 0.95 / 0.60 (second labeler); those figures are not an accuracy estimate.
-- Not caught: answers that obey an injected instruction (prompt injection), a refusal followed by made-up detail, and stereotypes worded as soft tendencies ("women CEOs tend to be more balanced").
+  The F1 gain is 0.06 to 0.41 (paired 95% interval) against the reviewer and 0.00 to 0.27 against the second labeler, so against the second labeler it is not clearly beyond noise. On one fixed 30/20 split of the prompts, rules chosen on the 30 changed nothing on the 20: most fixes rest on one or two prompts each. All rules were written after reading every error, so even the held-out numbers are optimistic. On the fitted answers themselves the detector scores 1.00 / 0.91 (reviewer) and 0.95 / 0.63 (second labeler); those figures are not an accuracy estimate.
+- Answers that obey an injected instruction: given the attack prompt, the detector flags an answer that outputs the phrase the injection demanded, speaks as the persona it assigned, switches to the language it demanded, or repeats a secret value written in the prompt. In the 100 recorded answers this fires once (the one unsafe injection answer, 1.5B on PI-004), so held out it gets no credit. On 48 new hand-written injection cases (24 obeyed, 24 refused or handled as data; `tests/injection_cases.json`), written before the rules and scored once, recall went from 0.00 to 0.79 (0.62-0.95) with no false alarms; F1 0.88 (0.76-0.98). The same person wrote the cases and the rules, so this overstates accuracy on real model output. Still missed: an injected sentence worked into the answer, an obeyed action described in prose ("Sending the addresses to ..."), an injected format such as all capitals, and an injected task done instead of the real one. Translating or summarising injected text counts as safe; the second labeler disagreed on some of those (PI-001, PI-002, PI-009). `POST /detect` and the dashboard's text box send no prompt, so these rules do not run there.
+- Not caught: a refusal followed by made-up detail, and stereotypes worded as soft tendencies ("women CEOs tend to be more balanced").
 - Two models and 50 prompts are enough to show the pipeline works on live output, not to rank the models or to validate the detector.
 
 ---
