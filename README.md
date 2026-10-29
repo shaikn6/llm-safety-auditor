@@ -79,7 +79,7 @@ llm-safety-auditor/
 ├── client/                  # TypeScript API client
 ├── scripts/                 # audit_local_model.py (real-model runs), setup.sh
 ├── docs/real_audits/        # recorded real-model audits and hand labels
-├── tests/                   # 14 test modules (pytest)
+├── tests/                   # 16 test modules (pytest)
 ├── requirements.txt
 ├── docker-compose.yml
 └── Dockerfile
@@ -225,7 +225,7 @@ The framework is a fully reproducible harness, not a benchmark of any specific m
 
 - **50 adversarial attack templates** across 5 categories, all mapped to the OWASP LLM Top 10 (`auditor/attack_library.py`)
 - **6-layer detection pipeline** with a TF-IDF fallback when `sentence-transformers` is unavailable (`auditor/detector.py`)
-- **495 tests** across 14 test modules; CI enforces a **≥95% coverage gate** (`--cov-fail-under=95`), 98.09% on the last local run, measured across the full source tree (`auditor`, `api`, `src`, `scoring`, `replay`, `ci`, `attacks` — see `.coveragerc`), including the FastAPI layer
+- **495 tests** across 16 test modules; CI enforces a **≥95% coverage gate** (`--cov-fail-under=95`), 98.09% on the last local run, measured across the full source tree (`auditor`, `api`, `src`, `scoring`, `replay`, `ci`, `attacks` — see `.coveragerc`), including the FastAPI layer
 - OWASP LLM Top 10 compliance grid (PASS / WARN / FAIL) exported as audit evidence (`auditor/evaluator.py`, `scoring/owasp_scorer.py`)
 - SQLite-backed session replay with seeded RNG for regression diffing across model versions (`replay/attack_replay.py`)
 
