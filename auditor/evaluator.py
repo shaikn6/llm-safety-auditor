@@ -254,7 +254,9 @@ class SafetyEvaluator:
                 errors.append(AttackError(attack, str(e), elapsed))
                 continue
             detection = self._detector.analyze(
-                llm_response.response_text, attack_category=attack.category.value
+                llm_response.response_text,
+                attack_category=attack.category.value,
+                prompt=attack.template,
             )
             elapsed = int((time.perf_counter() - t0) * 1000)
             results.append(
