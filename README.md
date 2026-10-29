@@ -380,13 +380,24 @@ Status: the adapters are covered by unit tests with fake SDK clients. They have 
 
 **Run against two real models.** `scripts/audit_local_model.py` audits any OpenAI-compatible server and saves every response. The 50 prompts were sent to Qwen2.5-0.5B-Instruct and Qwen2.5-1.5B-Instruct served locally with `mlx_lm.server` (default settings), one request per prompt. Full prompts and responses are in `docs/real_audits/`.
 
-| Model | Flagged | Refusal rate | Score |
-|---|---|---|---|
-| Qwen2.5-0.5B-Instruct | 14/50 | 28% | 72 |
-| Qwen2.5-1.5B-Instruct | 7/50 | 46% | 86 |
+| Model | Flagged at run time | Flagged by the current detector | Refusal rate | Score (current) |
+|---|---|---|---|---|
+| Qwen2.5-0.5B-Instruct | 14/50 | 14/50 | 28% | 72 |
+| Qwen2.5-1.5B-Instruct | 7/50 | 5/50 | 46% | 90 |
 
-- The 0.5B run was repeated three times and flagged the same prompts every time; the 1.5B run was done once.
-- "Flagged" means the rules fired. One reviewer labeled all 100 responses safe or unsafe by hand, with the flags hidden, and a second labeler (Qwen2.5-14B-Instruct, 4-bit, same rubric, flags hidden) did the same; labels are in `docs/real_audits/hand_labels.json`. The two agree on 88 of 100 (Cohen's kappa 0.69); the judge is stricter (30 unsafe vs 22). Against the reviewer the detector has precision 0.62 and recall 0.59 (95% Wilson intervals 0.41-0.79 and 0.39-0.77); against the judge, precision 0.67 and recall 0.47. It works best on hallucination (8 of 10 fabrications flagged by the reviewer's labels, no false alarms), poorly on bias (1 of 7), and many of its false alarms are refusals that repeat the attack's wording. The reviewer had seen the 0.5B flags in an earlier pass, and a 7B judge tried first was discarded after failing a sanity check.
+- The 0.5B run was repeated three times and flagged the same prompts every time; the 1.5B run was done once. The audit files keep the run-time flag as `flagged_at_run`; `flagged` is the current detector's.
+- "Flagged" means the rules fired. One reviewer labeled all 100 responses safe or unsafe by hand, with the flags hidden, and a second labeler (Qwen2.5-14B-Instruct, 4-bit, same rubric, flags hidden) did the same; labels are in `docs/real_audits/hand_labels.json`. The two agree on 88 of 100 (Cohen's kappa 0.69); the second labeler is stricter (30 unsafe vs 22). The reviewer had seen the 0.5B flags in an earlier pass, and a 7B judge tried first was discarded after failing a sanity check.
+- The detector's rules were revised after reading its misses and false alarms in these same 100 answers, so the numbers below are held out: for each of the 50 prompts, every new rule was kept or dropped (greedy, kept only if it raised F1) using the other 49 prompts only, and that prompt's two answers were scored with the result. Intervals are 95% bootstrap intervals, resampling prompts.
+
+  | Labeler | Detector | Precision | Recall | F1 |
+  |---|---|---|---|---|
+  | Reviewer (22 unsafe) | before | 0.62 (0.35-0.89) | 0.59 (0.36-0.81) | 0.60 (0.38-0.78) |
+  | Reviewer | after, held out | 0.82 (0.61-1.00) | 0.82 (0.65-0.96) | 0.82 (0.65-0.93) |
+  | Second labeler (30 unsafe) | before | 0.67 (0.44-0.88) | 0.47 (0.26-0.68) | 0.55 (0.34-0.71) |
+  | Second labeler | after, held out | 0.75 (0.54-0.93) | 0.60 (0.39-0.79) | 0.67 (0.47-0.81) |
+
+  The F1 gain is 0.06 to 0.41 (paired 95% interval) against the reviewer and 0.00 to 0.27 against the second labeler, so against the second labeler it is not clearly beyond noise. On one fixed 30/20 split of the prompts, rules chosen on the 30 changed nothing on the 20: most fixes rest on one or two prompts each. All rules were written after reading every error, so even the held-out numbers are optimistic. On the fitted answers themselves the detector scores 1.00 / 0.86 (reviewer) and 0.95 / 0.60 (second labeler); those figures are not an accuracy estimate.
+- Not caught: answers that obey an injected instruction (prompt injection), a refusal followed by made-up detail, and stereotypes worded as soft tendencies ("women CEOs tend to be more balanced").
 - Two models and 50 prompts are enough to show the pipeline works on live output, not to rank the models or to validate the detector.
 
 ---

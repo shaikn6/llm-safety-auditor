@@ -519,5 +519,335 @@
     0.781
    ]
   ]
+ },
+ "revised_detector": {
+  "note": "The detector_vs_* blocks above score the flags recorded at run time (flagged_at_run in the audit files). The rules were then revised after reading every error in these same 100 answers, and the audit files' flagged fields were re-scored with the revised detector. Blocks here score those flags in-sample, so they are not an accuracy estimate; heldout and heldout_judge score each prompt's two answers with rules chosen on the other 49 prompts only. Intervals are 95% Wilson intervals.",
+  "all": {
+   "n": 100,
+   "unsafe": 22,
+   "tp": 19,
+   "fp": 0,
+   "fn": 3,
+   "tn": 78,
+   "precision": [
+    1.0,
+    [
+     0.832,
+     1.0
+    ]
+   ],
+   "recall": [
+    0.864,
+    [
+     0.667,
+     0.953
+    ]
+   ],
+   "fpr": [
+    0.0,
+    [
+     0.0,
+     0.047
+    ]
+   ]
+  },
+  "excluding_borderline": {
+   "n": 85,
+   "unsafe": 16,
+   "tp": 16,
+   "fp": 0,
+   "fn": 0,
+   "tn": 69,
+   "precision": [
+    1.0,
+    [
+     0.806,
+     1.0
+    ]
+   ],
+   "recall": [
+    1.0,
+    [
+     0.806,
+     1.0
+    ]
+   ],
+   "fpr": [
+    0.0,
+    [
+     0.0,
+     0.053
+    ]
+   ]
+  },
+  "qwen05": {
+   "n": 50,
+   "unsafe": 14,
+   "tp": 14,
+   "fp": 0,
+   "fn": 0,
+   "tn": 36,
+   "precision": [
+    1.0,
+    [
+     0.785,
+     1.0
+    ]
+   ],
+   "recall": [
+    1.0,
+    [
+     0.785,
+     1.0
+    ]
+   ],
+   "fpr": [
+    0.0,
+    [
+     0.0,
+     0.096
+    ]
+   ]
+  },
+  "qwen15": {
+   "n": 50,
+   "unsafe": 8,
+   "tp": 5,
+   "fp": 0,
+   "fn": 3,
+   "tn": 42,
+   "precision": [
+    1.0,
+    [
+     0.566,
+     1.0
+    ]
+   ],
+   "recall": [
+    0.625,
+    [
+     0.306,
+     0.863
+    ]
+   ],
+   "fpr": [
+    0.0,
+    [
+     0.0,
+     0.084
+    ]
+   ]
+  },
+  "BIAS_ELICITATION": {
+   "n": 20,
+   "unsafe": 7,
+   "tp": 6,
+   "fp": 0,
+   "fn": 1,
+   "tn": 13,
+   "precision": [
+    1.0,
+    [
+     0.61,
+     1.0
+    ]
+   ],
+   "recall": [
+    0.857,
+    [
+     0.487,
+     0.974
+    ]
+   ],
+   "fpr": [
+    0.0,
+    [
+     0.0,
+     0.228
+    ]
+   ]
+  },
+  "DATA_EXFILTRATION": {
+   "n": 20,
+   "unsafe": 0,
+   "tp": 0,
+   "fp": 0,
+   "fn": 0,
+   "tn": 20,
+   "precision": null,
+   "recall": null,
+   "fpr": [
+    0.0,
+    [
+     -0.0,
+     0.161
+    ]
+   ]
+  },
+  "HALLUCINATION_TRIGGER": {
+   "n": 20,
+   "unsafe": 10,
+   "tp": 9,
+   "fp": 0,
+   "fn": 1,
+   "tn": 10,
+   "precision": [
+    1.0,
+    [
+     0.701,
+     1.0
+    ]
+   ],
+   "recall": [
+    0.9,
+    [
+     0.596,
+     0.982
+    ]
+   ],
+   "fpr": [
+    0.0,
+    [
+     -0.0,
+     0.278
+    ]
+   ]
+  },
+  "JAILBREAK": {
+   "n": 20,
+   "unsafe": 4,
+   "tp": 4,
+   "fp": 0,
+   "fn": 0,
+   "tn": 16,
+   "precision": [
+    1.0,
+    [
+     0.51,
+     1.0
+    ]
+   ],
+   "recall": [
+    1.0,
+    [
+     0.51,
+     1.0
+    ]
+   ],
+   "fpr": [
+    0.0,
+    [
+     0.0,
+     0.194
+    ]
+   ]
+  },
+  "PROMPT_INJECTION": {
+   "n": 20,
+   "unsafe": 1,
+   "tp": 0,
+   "fp": 0,
+   "fn": 1,
+   "tn": 19,
+   "precision": null,
+   "recall": [
+    0.0,
+    [
+     0.0,
+     0.793
+    ]
+   ],
+   "fpr": [
+    0.0,
+    [
+     0.0,
+     0.168
+    ]
+   ]
+  },
+  "vs_judge": {
+   "n": 100,
+   "unsafe": 30,
+   "tp": 18,
+   "fp": 1,
+   "fn": 12,
+   "precision": [
+    0.947,
+    [
+     0.754,
+     0.991
+    ]
+   ],
+   "recall": [
+    0.6,
+    [
+     0.423,
+     0.754
+    ]
+   ]
+  },
+  "both_agree": {
+   "n": 88,
+   "unsafe": 20,
+   "tp": 18,
+   "fp": 0,
+   "fn": 2,
+   "precision": [
+    1.0,
+    [
+     0.824,
+     1.0
+    ]
+   ],
+   "recall": [
+    0.9,
+    [
+     0.699,
+     0.972
+    ]
+   ]
+  },
+  "heldout": {
+   "n": 100,
+   "unsafe": 22,
+   "tp": 18,
+   "fp": 4,
+   "fn": 4,
+   "precision": [
+    0.818,
+    [
+     0.615,
+     0.927
+    ]
+   ],
+   "recall": [
+    0.818,
+    [
+     0.615,
+     0.927
+    ]
+   ]
+  },
+  "heldout_judge": {
+   "n": 100,
+   "unsafe": 30,
+   "tp": 18,
+   "fp": 6,
+   "fn": 12,
+   "precision": [
+    0.75,
+    [
+     0.551,
+     0.88
+    ]
+   ],
+   "recall": [
+    0.6,
+    [
+     0.423,
+     0.754
+    ]
+   ]
+  }
  }
 }
