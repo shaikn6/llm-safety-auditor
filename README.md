@@ -225,7 +225,7 @@ The framework is a fully reproducible harness, not a benchmark of any specific m
 
 - **50 adversarial attack templates** across 5 categories, all mapped to the OWASP LLM Top 10 (`auditor/attack_library.py`)
 - **6-layer detection pipeline** with a TF-IDF fallback when `sentence-transformers` is unavailable (`auditor/detector.py`)
-- **495 tests** across 16 test modules; CI enforces a **≥95% coverage gate** (`--cov-fail-under=95`), 98.09% on the last local run, measured across the full source tree (`auditor`, `api`, `src`, `scoring`, `replay`, `ci`, `attacks` — see `.coveragerc`), including the FastAPI layer
+- **635 tests** across 16 test modules; CI enforces a **≥95% coverage gate** (`--cov-fail-under=95`), 98.16% on the last local run, measured across the full source tree (`auditor`, `api`, `src`, `scoring`, `replay`, `ci`, `attacks` — see `.coveragerc`), including the FastAPI layer
 - OWASP LLM Top 10 compliance grid (PASS / WARN / FAIL) exported as audit evidence (`auditor/evaluator.py`, `scoring/owasp_scorer.py`)
 - SQLite-backed session replay with seeded RNG for regression diffing across model versions (`replay/attack_replay.py`)
 
@@ -460,7 +460,7 @@ curl -X POST http://localhost:8000/detect \
 | Dashboard | Streamlit + Plotly + Matplotlib |
 | Client | TypeScript (axios) |
 | CI integration | generated GitHub Actions workflow + SARIF |
-| Testing | pytest + pytest-cov (495 tests, ≥95% gate, 98.09% on the last local run across full source tree); ruff · mypy · bandit · pip-audit |
+| Testing | pytest + pytest-cov (635 tests, ≥95% gate, 98.16% on the last local run across full source tree); ruff · mypy · bandit · pip-audit |
 | Containerization | Docker + Docker Compose |
 
 ---
