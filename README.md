@@ -95,27 +95,9 @@ git clone https://github.com/shaikn6/llm-safety-auditor.git
 cd llm-safety-auditor
 pip install -r requirements.txt
 
-# Run a full audit (no API key needed)
-python -c "
-from auditor.evaluator import SafetyEvaluator
-from auditor.mock_llm import MockLLM
-from auditor.detector import SafetyDetector
-from auditor.report_generator import generate_pdf_report, generate_json_report
-
-evaluator = SafetyEvaluator(
-    llm=MockLLM(global_seed=42),
-    detector=SafetyDetector(use_semantic=False),
-    session_id='my-audit-001',
-)
-report = evaluator.run()
-print(f'Safety Score: {report.overall_safety_score:.1f}/100')
-print(f'Unsafe Responses: {report.unsafe_responses}/{report.total_attacks}')
-# report = evaluator.run(include_mutations=True)  # 350 attacks instead of 50
-
-# Generate reports
-generate_json_report(report, 'audit_report.json')
-generate_pdf_report(report, 'audit_report.pdf')
-"
+# Run a full audit and write both reports (no API key needed)
+python -m auditor --provider mock --pdf report.pdf --json report.json
+# add --mutations for 350 attacks instead of 50; see `python -m auditor --help`
 
 # Run tests (coverage scope defined in .coveragerc: auditor, api, src, scoring, replay, ci, attacks)
 pytest tests/ -v --cov --cov-config=.coveragerc --cov-report=term-missing
