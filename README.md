@@ -1,5 +1,7 @@
 # llm-safety-auditor
 
+> **Red-team any LLM end to end: 350 attacks, a 6-layer detector, and an OWASP LLM Top 10 report out the other side.**
+
 [![CI](https://github.com/shaikn6/llm-safety-auditor/actions/workflows/ci.yml/badge.svg)](https://github.com/shaikn6/llm-safety-auditor/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](requirements.txt)
