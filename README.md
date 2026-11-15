@@ -24,6 +24,8 @@ Two models and 50 prompts show the pipeline works on live output; they do not ra
 
 Teams that put an LLM in front of users need to know how it behaves under prompt injection, jailbreaks, data-exfiltration attempts, biased framing and questions with no true answer, and they need that check to be repeatable from one model version to the next. Manual review is slow and inconsistent. This harness turns the check into a scripted audit: a fixed attack library, a detector whose rules can be read, OWASP LLM Top 10 mapping, saved sessions for diffing runs, and a report that can be filed as evidence.
 
+It scores a model's **output behaviour** across the OWASP LLM Top 10, which is a different target from the narrower safety tools elsewhere in [this portfolio](https://github.com/shaikn6) — for example `guard-gap-detector` (sandbox escapes in Python interpreters) or `fin-lora-attack-demo` (one prompt-injection attack on one adapter).
+
 ## Architecture
 
 ```mermaid
@@ -60,7 +62,7 @@ Repository layout:
 ```
 llm-safety-auditor/
 ├── auditor/
-│   ├── attack_library.py    # 50+ adversarial prompt templates
+│   ├── attack_library.py    # 50 adversarial prompt templates
 │   ├── evaluator.py         # Orchestrates red-teaming sessions
 │   ├── detector.py          # 6-layer safety detection pipeline
 │   ├── report_generator.py  # PDF + JSON audit reports
@@ -81,7 +83,7 @@ llm-safety-auditor/
 ├── client/                  # TypeScript API client
 ├── scripts/                 # audit_local_model.py (real-model runs), setup.sh
 ├── docs/real_audits/        # recorded real-model audits and hand labels
-├── tests/                   # 16 test modules (pytest)
+├── tests/                   # 17 test modules (pytest)
 ├── requirements.txt
 ├── docker-compose.yml
 └── Dockerfile
@@ -209,7 +211,7 @@ The framework is a fully reproducible harness, not a benchmark of any specific m
 
 - **50 adversarial attack templates** across 5 categories, all mapped to the OWASP LLM Top 10 (`auditor/attack_library.py`)
 - **6-layer detection pipeline** with a TF-IDF fallback when `sentence-transformers` is unavailable (`auditor/detector.py`)
-- **635 tests** across 16 test modules; CI enforces a **≥95% coverage gate** (`--cov-fail-under=95`), 98.16% on the last local run, measured across the full source tree (`auditor`, `api`, `src`, `scoring`, `replay`, `ci`, `attacks` — see `.coveragerc`), including the FastAPI layer
+- **642 tests** across 17 test modules; CI enforces a **≥95% coverage gate** (`--cov-fail-under=95`), 98.55% on the latest local run (Python 3.15), measured across the full source tree (`auditor`, `api`, `src`, `scoring`, `replay`, `ci`, `attacks` — see `.coveragerc`), including the FastAPI layer
 - OWASP LLM Top 10 compliance grid (PASS / WARN / FAIL) exported as audit evidence (`auditor/evaluator.py`, `scoring/owasp_scorer.py`)
 - SQLite-backed session replay with seeded RNG for regression diffing across model versions (`replay/attack_replay.py`)
 
@@ -444,7 +446,7 @@ curl -X POST http://localhost:8000/detect \
 | Dashboard | Streamlit + Plotly + Matplotlib |
 | Client | TypeScript (axios) |
 | CI integration | generated GitHub Actions workflow + SARIF |
-| Testing | pytest + pytest-cov (635 tests, ≥95% gate, 98.16% on the last local run across full source tree); ruff · mypy · bandit · pip-audit |
+| Testing | pytest + pytest-cov (642 tests, ≥95% gate, 98.55% on the latest local run across full source tree); ruff · mypy · bandit · pip-audit |
 | Containerization | Docker + Docker Compose |
 
 ---
