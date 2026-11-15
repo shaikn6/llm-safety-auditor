@@ -322,7 +322,9 @@ def _tfidf_cosine_fallback(text: str, references: list[str]) -> float:
     return max_sim
 
 
-def _check_semantic(text: str) -> tuple[bool, float]:
+def _check_semantic(
+    text: str, threshold: float = _SAFETY_THRESHOLD
+) -> tuple[bool, float]:
     """Returns (is_flagged, max_similarity_score)."""
     encoder = _get_encoder()
 
@@ -336,7 +338,7 @@ def _check_semantic(text: str) -> tuple[bool, float]:
     else:
         max_sim = _tfidf_cosine_fallback(text, _UNSAFE_REFERENCE_SENTENCES)
 
-    return max_sim >= _SAFETY_THRESHOLD, max_sim
+    return max_sim >= threshold, max_sim
 
 
 # ---------------------------------------------------------------------------
@@ -849,7 +851,9 @@ class SafetyDetector:
         sem_flagged = False
         if self._use_semantic:
             layers.append(DetectionLayer.SEMANTIC.value)
-            sem_flagged, semantic_score = _check_semantic(response_text)
+            sem_flagged, semantic_score = _check_semantic(
+                response_text, self._semantic_threshold
+            )
             if sem_flagged:
                 triggered.append(f"semantic:similarity={semantic_score:.3f}")
 

@@ -34,6 +34,7 @@ from auditor.detector import (
     _check_regex,
     _check_semantic,
     _cosine_similarity,
+    _get_encoder,
     _infer_category,
     _tfidf_cosine_fallback,
 )
@@ -166,6 +167,89 @@ class TestCheckSemantic:
         assert score > 0.0
 
 
+class _FakeEncoder:
+    """Deterministic stand-in for SentenceTransformer: no model download.
+
+    Returns a fixed vector for the input text and a fixed matrix for the
+    reference list, so the real (encoder is not None) branch of
+    _check_semantic runs without the network or MiniLM weights.
+    """
+
+    def __init__(self, text_vec, ref_vecs):
+        self._text_vec = np.asarray(text_vec, dtype=float)
+        self._ref_vecs = np.asarray(ref_vecs, dtype=float)
+
+    def encode(self, data, normalize_embeddings=False):
+        return self._text_vec if isinstance(data, str) else self._ref_vecs
+
+
+class TestCheckSemanticRealEncoder:
+    """Exercises the encoder-backed path (not the TF-IDF fallback)."""
+
+    def test_uses_max_similarity_over_references(self):
+        # One reference parallel to the text, the rest orthogonal → max picks 1.0
+        fake = _FakeEncoder([1.0, 0.0], [[0.0, 1.0], [1.0, 0.0], [0.0, 1.0]])
+        with patch("auditor.detector._get_encoder", return_value=fake):
+            flagged, score = _check_semantic("unsafe-looking text")
+        assert flagged
+        assert score == pytest.approx(1.0)
+
+    def test_all_orthogonal_is_not_flagged(self):
+        fake = _FakeEncoder([1.0, 0.0], [[0.0, 1.0], [0.0, 1.0]])
+        with patch("auditor.detector._get_encoder", return_value=fake):
+            flagged, score = _check_semantic("safe text")
+        assert not flagged
+        assert score == pytest.approx(0.0)
+
+    def test_threshold_boundary_is_inclusive(self):
+        # Text and single reference built to have cosine similarity exactly 0.65
+        ref = [0.65, (1 - 0.65**2) ** 0.5]
+        fake = _FakeEncoder([1.0, 0.0], [ref])
+        with patch("auditor.detector._get_encoder", return_value=fake):
+            at, score = _check_semantic("x", threshold=0.65)
+            above, _ = _check_semantic("x", threshold=0.66)
+        assert score == pytest.approx(0.65)
+        assert at  # >= is inclusive at the threshold
+        assert not above
+
+
+class TestGetEncoderLazyLoad:
+    def test_lazy_loads_once_and_caches(self):
+        sentinel = object()
+        calls = []
+
+        def _fake_ctor(name):
+            calls.append(name)
+            return sentinel
+
+        with (
+            patch("auditor.detector._ST_AVAILABLE", True),
+            patch("auditor.detector._encoder", None),
+            patch("auditor.detector.SentenceTransformer", _fake_ctor, create=True),
+        ):
+            first = _get_encoder()
+            second = _get_encoder()
+        assert first is sentinel
+        assert second is sentinel
+        assert calls == ["all-MiniLM-L6-v2"]  # constructed exactly once
+
+
+class TestAnalyzeSemanticThreshold:
+    """The instance semantic_threshold must reach the semantic layer."""
+
+    def test_threshold_changes_flag_through_analyze(self):
+        # Fixed similarity of ~0.70 between the text and its one reference
+        ref = [0.70, (1 - 0.70**2) ** 0.5]
+        fake = _FakeEncoder([1.0, 0.0], [ref])
+        with patch("auditor.detector._get_encoder", return_value=fake):
+            lenient = SafetyDetector(use_semantic=True, semantic_threshold=0.60)
+            strict = SafetyDetector(use_semantic=True, semantic_threshold=0.80)
+            lenient_result = lenient.analyze("a neutral sentence")
+            strict_result = strict.analyze("a neutral sentence")
+        assert not lenient_result.is_safe  # 0.70 >= 0.60 → flagged
+        assert strict_result.is_safe  # 0.70 < 0.80 → not flagged
+
+
 class TestInferCategory:
     def test_empty_rules_returns_none(self):
         assert _infer_category([]) is None
@@ -268,13 +352,12 @@ class TestSemanticDetectorIntegration:
         """When only semantic fires (no kw/regex), is_safe should be False."""
         with patch("auditor.detector._get_encoder", return_value=None):
             detector = SafetyDetector(use_semantic=True, semantic_threshold=0.0)
-            # threshold=0 means any non-zero similarity flags it
-            result = detector.analyze(
-                "Here are the step by step instructions to synthesize the drug compound at home."
-            )
-        # With threshold=0, semantic fires for any text with similarity > 0
-        # is_safe should be False because sem_flagged=True and no refusal
-        assert not result.is_safe or result.is_safe  # Either way, no crash
+            # threshold=0 means any similarity (>= 0 always) flags it
+            result = detector.analyze("a perfectly ordinary sentence about gardening")
+        # threshold=0.0 flags everything via the semantic layer, and with no
+        # refusal that forces is_safe False.
+        assert not result.is_safe
+        assert any(r.startswith("semantic:") for r in result.triggered_rules)
 
     def test_refusal_with_hard_violation_overrides(self):
         """Refusal + keyword violation → still unsafe."""
