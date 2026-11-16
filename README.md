@@ -81,9 +81,9 @@ llm-safety-auditor/
 ├── scoring/  replay/        # OWASP scoring · SQLite session replay
 ├── attacks/  ci/            # attack generator · GitHub Actions generator
 ├── client/                  # TypeScript API client
-├── scripts/                 # audit_local_model.py (real-model runs), setup.sh
+├── scripts/                 # audit_local_model.py (real-model runs), score_real_audits.py, setup.sh
 ├── docs/real_audits/        # recorded real-model audits and hand labels
-├── tests/                   # 17 test modules (pytest)
+├── tests/                   # 18 test modules (pytest)
 ├── requirements.txt
 ├── docker-compose.yml
 └── Dockerfile
@@ -155,6 +155,8 @@ Status: the adapters are covered by unit tests with fake SDK clients. They have 
 - "Flagged" means the rules fired. One reviewer labeled all 100 responses safe or unsafe by hand, with the flags hidden, and a second labeler (Qwen2.5-14B-Instruct, 4-bit, same rubric, flags hidden) did the same; labels are in `docs/real_audits/hand_labels.json`. The two agree on 88 of 100 (Cohen's kappa 0.69); the second labeler is stricter (30 unsafe vs 22). The reviewer had seen the 0.5B flags in an earlier pass, and a 7B judge tried first was discarded after failing a sanity check.
 - The detector's rules were revised after reading its misses and false alarms in these same 100 answers, so the numbers below are held out: for each of the 50 prompts, every new rule was kept or dropped (greedy, kept only if it raised F1) using the other 49 prompts only, and that prompt's two answers were scored with the result. Intervals are 95% bootstrap intervals, resampling prompts.
 
+  What can be regenerated: `python scripts/score_real_audits.py` recomputes the labeler agreement (88 of 100, kappa 0.69), the "before" rows with their intervals, the fitted-answer scores and the injection-case figures below from the committed files, and writes them to `docs/real_audits/scores.json` (B=10,000, seed 0); `tests/test_score_real_audits.py` fails if that file goes stale. What cannot: the "after, held out" rows, the paired F1-gain intervals and the 30/20 split check came from a one-off leave-one-prompt-out analysis over the rule history, and that procedure is not scripted in this repository. Treat those figures as recorded, not reproducible.
+
   | Labeler | Detector | Precision | Recall | F1 |
   |---|---|---|---|---|
   | Reviewer (22 unsafe) | before | 0.62 (0.35-0.89) | 0.59 (0.36-0.81) | 0.60 (0.38-0.78) |
@@ -211,11 +213,11 @@ The framework is a fully reproducible harness, not a benchmark of any specific m
 
 - **50 adversarial attack templates** across 5 categories, all mapped to the OWASP LLM Top 10 (`auditor/attack_library.py`)
 - **6-layer detection pipeline** with a TF-IDF fallback when `sentence-transformers` is unavailable (`auditor/detector.py`)
-- **642 tests** across 17 test modules; CI enforces a **≥95% coverage gate** (`--cov-fail-under=95`), 98.55% on the latest local run (Python 3.15), measured across the full source tree (`auditor`, `api`, `src`, `scoring`, `replay`, `ci`, `attacks` — see `.coveragerc`), including the FastAPI layer
+- **645 tests** across 18 test modules; CI enforces a **≥95% coverage gate** (`--cov-fail-under=95`), 98.55% on the latest local run (Python 3.12, as in CI), measured across the full source tree (`auditor`, `api`, `src`, `scoring`, `replay`, `ci`, `attacks` — see `.coveragerc`), including the FastAPI layer
 - OWASP LLM Top 10 compliance grid (PASS / WARN / FAIL) exported as audit evidence (`auditor/evaluator.py`, `scoring/owasp_scorer.py`)
 - SQLite-backed session replay with seeded RNG for regression diffing across model versions (`replay/attack_replay.py`)
 
-> **About the numbers below.** Out of the box the harness runs against a **seeded, deterministic mock LLM** (`auditor/mock_llm.py`) so it works with no API key. The per-category percentages shown in the table and screenshots come from the mock's **configured failure rates** (`CATEGORY_FAILURE_RATES`) — i.e. illustrative, reproducible demonstration data, **not** measured results against a production model. Set `LLM_PROVIDER` to audit a real model; the scoring, detection, and reporting logic is identical. The screenshots were generated before the bias / hallucination detector layers existed and have not been regenerated.
+> **About the numbers below.** Out of the box the harness runs against a **seeded, deterministic mock LLM** (`auditor/mock_llm.py`) so it works with no API key. The per-category percentages shown in the table and the attack-rate screenshot come from the mock's **configured failure rates** (`CATEGORY_FAILURE_RATES`) — i.e. illustrative, reproducible demonstration data, **not** measured results against a production model. Set `LLM_PROVIDER` to audit a real model; the scoring, detection, and reporting logic is identical. The screenshots were generated before the bias / hallucination detector layers existed and have not been regenerated.
 
 ---
 
@@ -292,6 +294,8 @@ DetectionResult(
 
 ## Screenshots
 
+These four charts are drawn by `generate_screenshots.py` from values written into that script, not from an audit run. The attack-rate bars use the mock's configured failure rates; the radar's before/after scores, the OWASP grid statuses and the 10-session timeline are made-up illustration values that show the chart layouts.
+
 ### Safety Dimensions Radar
 ![Safety Radar](docs/screenshots/safety_radar.png)
 
@@ -301,7 +305,7 @@ DetectionResult(
 ### OWASP LLM Top 10 Compliance Grid
 ![OWASP Compliance](docs/screenshots/owasp_compliance.png)
 
-### Vulnerability Timeline (10 Audit Sessions)
+### Vulnerability Timeline (10 illustrative sessions)
 ![Timeline](docs/screenshots/vulnerability_timeline.png)
 
 ---
@@ -446,7 +450,7 @@ curl -X POST http://localhost:8000/detect \
 | Dashboard | Streamlit + Plotly + Matplotlib |
 | Client | TypeScript (axios) |
 | CI integration | generated GitHub Actions workflow + SARIF |
-| Testing | pytest + pytest-cov (642 tests, ≥95% gate, 98.55% on the latest local run across full source tree); ruff · mypy · bandit · pip-audit |
+| Testing | pytest + pytest-cov (645 tests, ≥95% gate, 98.55% on the latest local run across full source tree); ruff and bandit gate CI; pip-audit runs in CI as advisory; mypy runs with `make type-check`, not in CI |
 | Containerization | Docker + Docker Compose |
 
 ---
