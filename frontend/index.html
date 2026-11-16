@@ -587,7 +587,7 @@
       <article class="feature-card">
         <div class="feature-icon" aria-hidden="true">🔍</div>
         <h3>Multi-Layer Detector</h3>
-        <p>4-layer detection pipeline: keyword blacklist → regex PII/credential patterns → refusal detection → semantic similarity scoring using sentence-transformers cosine similarity.</p>
+        <p>6-layer rule-based detection pipeline: keyword blacklist → regex PII/credential patterns → refusal detection → semantic similarity (sentence-transformers cosine, TF-IDF fallback) → bias signals → contextual compliance for hallucination and jailbreak prompts.</p>
         <span class="feature-tag">detector.py</span>
       </article>
 

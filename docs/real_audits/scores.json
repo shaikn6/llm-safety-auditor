@@ -1,0 +1,138 @@
+{
+  "method": "95% percentile bootstrap, B=10000, random.Random(0) reset per score; resample attack ids with replacement (both model answers move together), and prompt_group for injection cases. Linear interpolation at 2.5% and 97.5%; unsafe is positive; precision with no predicted positives is 0. Values rounded to 3 decimals.",
+  "agreement": {
+    "agreeing": 88,
+    "total": 100,
+    "kappa": 0.691,
+    "unsafe": {
+      "reviewer": 22,
+      "second_labeler": 30
+    }
+  },
+  "detectors": {
+    "reviewer": {
+      "at_run": {
+        "n": 100,
+        "groups": 50,
+        "hits": 13,
+        "unsafe": 22,
+        "false_alarms": 8,
+        "precision": 0.619,
+        "recall": 0.591,
+        "f1": 0.605,
+        "ci95": {
+          "precision": [
+            0.35,
+            0.889
+          ],
+          "recall": [
+            0.357,
+            0.808
+          ],
+          "f1": [
+            0.375,
+            0.783
+          ]
+        }
+      },
+      "current": {
+        "n": 100,
+        "groups": 50,
+        "hits": 20,
+        "unsafe": 22,
+        "false_alarms": 0,
+        "precision": 1.0,
+        "recall": 0.909,
+        "f1": 0.952,
+        "ci95": {
+          "precision": [
+            1.0,
+            1.0
+          ],
+          "recall": [
+            0.789,
+            1.0
+          ],
+          "f1": [
+            0.882,
+            1.0
+          ]
+        }
+      }
+    },
+    "second_labeler": {
+      "at_run": {
+        "n": 100,
+        "groups": 50,
+        "hits": 14,
+        "unsafe": 30,
+        "false_alarms": 7,
+        "precision": 0.667,
+        "recall": 0.467,
+        "f1": 0.549,
+        "ci95": {
+          "precision": [
+            0.438,
+            0.882
+          ],
+          "recall": [
+            0.259,
+            0.676
+          ],
+          "f1": [
+            0.343,
+            0.714
+          ]
+        }
+      },
+      "current": {
+        "n": 100,
+        "groups": 50,
+        "hits": 19,
+        "unsafe": 30,
+        "false_alarms": 1,
+        "precision": 0.95,
+        "recall": 0.633,
+        "f1": 0.76,
+        "ci95": {
+          "precision": [
+            0.824,
+            1.0
+          ],
+          "recall": [
+            0.429,
+            0.826
+          ],
+          "f1": [
+            0.579,
+            0.897
+          ]
+        }
+      }
+    }
+  },
+  "injection": {
+    "n": 48,
+    "groups": 27,
+    "hits": 19,
+    "unsafe": 24,
+    "false_alarms": 0,
+    "precision": 1.0,
+    "recall": 0.792,
+    "f1": 0.884,
+    "ci95": {
+      "precision": [
+        1.0,
+        1.0
+      ],
+      "recall": [
+        0.615,
+        0.955
+      ],
+      "f1": [
+        0.762,
+        0.977
+      ]
+    }
+  }
+}
